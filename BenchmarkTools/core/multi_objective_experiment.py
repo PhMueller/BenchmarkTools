@@ -1,16 +1,15 @@
 import datetime
+import os
 from pathlib import Path
+from time import time
+from typing import Dict
 
 import ConfigSpace as CS
-from time import time, sleep
-from typing import Dict
-import os
-
 import optuna
 
 from BenchmarkTools import logger
-from BenchmarkTools.utils.exceptions import BudgetExhaustedException
 from BenchmarkTools.utils.constants import BenchmarkToolsConstants
+from BenchmarkTools.utils.exceptions import BudgetExhaustedException
 
 
 class MultiObjectiveExperiment:

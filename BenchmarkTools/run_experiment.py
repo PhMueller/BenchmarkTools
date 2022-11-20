@@ -1,12 +1,12 @@
-from typing import Dict
 from pathlib import Path
-from BenchmarkTools import logger
-from BenchmarkTools.utils.exceptions import AlreadyFinishedException
-from BenchmarkTools.utils.constants import BenchmarkToolsConstants
+from typing import Dict
 
+from BenchmarkTools import logger
 from BenchmarkTools.benchmarks.toy_benchmark import BOTestFunctionBenchmark
-from BenchmarkTools.optimizers.random_search import RandomSearchOptimizer
 from BenchmarkTools.core.multi_objective_experiment import MultiObjectiveExperiment
+from BenchmarkTools.optimizers.random_search import RandomSearchOptimizer
+from BenchmarkTools.utils.constants import BenchmarkToolsConstants
+from BenchmarkTools.utils.exceptions import AlreadyFinishedException
 
 
 def run(benchmark_name: str,

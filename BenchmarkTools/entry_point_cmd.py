@@ -1,5 +1,7 @@
 from pathlib import Path
+
 from BenchmarkTools.run_experiment import run
+
 
 def main_cmd(args):
     run(

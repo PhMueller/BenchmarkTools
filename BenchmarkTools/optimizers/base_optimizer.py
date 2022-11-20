@@ -1,4 +1,5 @@
 from typing import Callable, Dict, Union
+
 import ConfigSpace as CS
 
 
