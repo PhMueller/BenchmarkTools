@@ -16,18 +16,22 @@ class MultiObjectiveExperiment:
     def __init__(
             self,
             optimizer,
+            optimizer_settings: Dict,
             benchmark,
             benchmark_settings: Dict,
             output_path: Path,
-            seed: int = 0,
+            run_id: int = 0,
     ):
+        self.output_path = Path(output_path)
         self.optimizer = optimizer
+        self.optimizer_settings = optimizer_settings
         self.benchmark = benchmark
         self.benchmark_settings = benchmark_settings
-        self.seed = seed
-        self.search_space = benchmark.get_configuration_space(seed=seed)
+        self.run_id = run_id
+        self.study_name = self.benchmark_settings['name'] + '_' + self.optimizer_settings['name'] + '_' + str(self.run_id)
+
+        self.search_space = benchmark.get_configuration_space(seed=run_id)
         self.optuna_distributions = self._configuration_space_cs_optuna_distributions(self.search_space)
-        self.output_path = Path(output_path)
 
         self.initial_time = time()
         self.num_configs_evaluated = -1
@@ -42,9 +46,9 @@ class MultiObjectiveExperiment:
         self.is_surrogate = self.benchmark_settings['optimization_parameters']['is_surrogate']
 
         self.study: [optuna.Study, None] = None
-        self.objective_names =  [
-            obj['name'] for obj in self.benchmark_settings['objectives']
-        ]
+        self.storage_path = self.output_path / BenchmarkToolsConstants.DATABASE_NAME
+
+        self.objective_names = [obj['name'] for obj in self.benchmark_settings['objectives']]
         self.directions = [
             'minimize' if obj['lower_is_better'] else 'maximize'
             for obj in self.benchmark_settings['objectives']
@@ -67,23 +71,46 @@ class MultiObjectiveExperiment:
         """
         # TODO: Adaptive storage dir
         # TODO: Adaptive study name
-        load_if_exists = True
-        study_name = 'test_0123'
-        path_to_db = Path('C:/Users/Philipp/PycharmProjects/BenchmarkTools/Results/test/database.db')
-        # path_to_db = Path(self.output_dir / 'database.db')
+        load_if_exists = False
 
         if os.name == 'posix':
-            storage = f"sqlite:////{path_to_db.resolve()}"
+            storage = f"sqlite:////{self.storage_path.resolve()}"
         else:
-            storage = f"sqlite:///{path_to_db.resolve()}"
+            storage = f"sqlite:///{self.storage_path.resolve()}"
 
-        logger.info(f'Try to connect to study {study_name} at {storage}')
-        self.study = optuna.create_study(
-            study_name=study_name,
-            storage=storage,
-            directions=self.directions,
-            load_if_exists=load_if_exists,
-        )
+        logger.info(f'Try to connect to study {self.study_name} at {storage}')
+        try:
+            self.study = optuna.create_study(
+                study_name=self.study_name,
+                storage=storage,
+                directions=self.directions,
+                load_if_exists=load_if_exists,
+            )
+        except optuna.exceptions.DuplicatedStudyError:
+            optuna.delete_study(
+                study_name=self.study_name,
+                storage=storage,
+            )
+            self.study = optuna.create_study(
+                study_name=self.study_name,
+                storage=storage,
+                directions=self.directions,
+                load_if_exists=load_if_exists,
+            )
+
+        # Add experiment information to the study
+        experiment_information = {
+            'benchmark_name': self.benchmark_settings['name'],
+            'optimizer_name': self.optimizer_settings['name'],
+            'run_id': self.run_id,
+            'objective_names': self.objective_names,
+            'directions': self.directions,
+        }
+        for k, v in experiment_information.items():
+            self.study.set_user_attr(k, v)
+
+        # optuna.delete_study
+        # TODO: When continue: update optimization limits
 
     def evaluate_configuration(
             self,
@@ -153,7 +180,7 @@ class MultiObjectiveExperiment:
         trial = optuna.create_trial(
             state=optuna.trial.TrialState.RUNNING,
             params=configuration,
-            distributions=self.optuna_distributions,
+            distributions={name: dist for name, dist in self.optuna_distributions.items() if name in configuration.keys()},
         )
         # TODO: Assigning a run_id might be better with a lock! In case of parallel optimization
         trial.number = self.num_configs_evaluated

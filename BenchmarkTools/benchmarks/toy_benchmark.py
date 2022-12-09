@@ -7,7 +7,7 @@ from hpobench.abstract_benchmark import AbstractBenchmark
 from torch import Tensor
 
 from BenchmarkTools.utils.loader_tools import load_object
-
+from botorch.test_functions.multi_objective import BraninCurrin
 
 # from MOHPOBenchExperimentUtils.core.multiobjective_experiment_new import MultiObjectiveSimpleExperiment
 # from MOHPOBenchExperimentUtils.core.target_normalization import TargetScaler, get_scaler

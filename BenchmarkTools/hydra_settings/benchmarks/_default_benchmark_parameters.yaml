@@ -1,0 +1,19 @@
+name: ???
+
+objectives: ???
+
+track_metrics: ???
+
+# benchmark_type: HPOBenchContainer HPOBenchLocal BotorchToyBenchmark
+
+benchmark_import:
+  import_from: ???
+  benchmark_name: ???
+
+benchmark_parameters: ???
+
+optimization_parameters:
+  tae_limit: ???
+  wallclock_limit_in_s: ???
+  estimated_cost_limit_in_s: ???
+  is_surrogate: ???

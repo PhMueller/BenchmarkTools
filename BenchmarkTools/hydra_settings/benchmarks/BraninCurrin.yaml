@@ -1,0 +1,30 @@
+defaults:
+  - _default_benchmark_parameters
+  - __self__
+
+name: BraninCurrin
+
+objectives:
+  - name: branin
+    limits: [0, 350]
+    lower_is_better: True
+  - name: currin
+    limits: [0, 12]
+    lower_is_better: True
+
+track_metrics: []
+
+benchmark_import:
+  import_from: benchmarks.toy_benchmark
+  benchmark_name: BOTestFunctionBenchmark
+
+benchmark_parameters:
+  function_name: BraninCurrin
+  function_kwargs:
+    negate: false
+
+optimization_parameters:
+  tae_limit: 100
+  wallclock_limit_in_s: 1800
+  estimated_cost_limit_in_s: 1800
+  is_surrogate: True

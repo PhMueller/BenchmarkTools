@@ -18,3 +18,4 @@ class BenchmarkToolsTrackMetrics(_BaseEnum):
 
 class BenchmarkToolsConstants(_BaseEnum):
     FINISHED_FLAG = 'RUN_HAS_FINISHED.FLAG'
+    DATABASE_NAME = 'run_storage.db'

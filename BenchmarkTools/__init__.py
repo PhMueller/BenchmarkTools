@@ -2,7 +2,11 @@ import sys
 
 from loguru import logger
 
-logger.remove(0)
+try:
+    logger.remove(0)
+except ValueError:
+    pass
+
 logger.add(
     # colorize=False,
     # format='<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',
@@ -11,6 +15,4 @@ logger.add(
     enqueue=True,
     sink=sys.stdout,
 )
-logger.info('Import BenchTools.')
-
-__version__ = '0.0.1_dev'
+logger.info('Import BenchmarkTools')

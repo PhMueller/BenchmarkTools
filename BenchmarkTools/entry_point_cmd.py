@@ -10,7 +10,8 @@ def main_cmd(args):
         benchmark_name=args.benchmark_name,
         benchmark_settings={},
         run_id=0,
-        output_path=Path('C:/Users/Philipp/PycharmProjects/BenchmarkTools/Results')
+        output_path=Path('/home/pm/Dokumente/Code/BenchmarkTools/Results'),
+        debug=args.debug,
     )
 
 
@@ -20,5 +21,6 @@ if __name__ == '__main__':
     parser = ArgumentParser('')
     parser.add_argument('--optimizer_name')
     parser.add_argument('--benchmark_name')
+    parser.add_argument('--debug', action='store_true', default=False)
     args = parser.parse_args()
     main_cmd(args)
