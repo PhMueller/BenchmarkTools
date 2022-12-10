@@ -24,14 +24,14 @@ def load_object(import_name: str, import_from: str) -> Any:
     return obj
 
 
-def load_benchmark(benchmark_name, import_from, use_local: bool) -> Any:
+def load_benchmark(import_name, import_from, use_local: bool) -> Any:
     """
     Load the benchmark object.
     If not `use_local`:  Then load a container from a given source, defined in the HPOBench.
-    Import via command from hpobench.[container.]benchmarks.<import_from> import <benchmark_name>
+    Import via command from hpobench.[container.]benchmarks.<import_from> import <import_name>
     Parameters
     ----------
-    benchmark_name : str
+    import_name : str
     import_from : str
     use_local : bool
         By default this value is set to false.
@@ -44,10 +44,6 @@ def load_benchmark(benchmark_name, import_from, use_local: bool) -> Any:
     Benchmark
     """
     import_str = 'hpobench.' + ('container.' if not use_local else '') + 'benchmarks.' + import_from
-    logger.debug(f'Try to execute command: from {import_str} import {benchmark_name}')
-
-    module = import_module(import_str)
-    benchmark_obj = getattr(module, benchmark_name)
-    logger.debug(f'Benchmark {benchmark_name} successfully loaded')
-
+    benchmark_obj = load_object(import_name=import_name, import_from=import_str)
+    logger.debug(f'Benchmark {import_name} successfully loaded')
     return benchmark_obj

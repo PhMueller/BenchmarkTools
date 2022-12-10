@@ -36,7 +36,7 @@ class BOTestFunctionBenchmark(AbstractBenchmark):
                 default_value=self.function.bounds[0, i],
             ) for i in range(self.function.bounds.shape[1])
         ])
-        return cs  # 2.0.0 for smac
+        return cs
 
     def get_fidelity_space(self, seed: Union[int, None] = None) -> CS.ConfigurationSpace:
         cs = CS.ConfigurationSpace(seed=seed)

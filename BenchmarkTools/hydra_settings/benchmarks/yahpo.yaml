@@ -2,26 +2,26 @@ defaults:
   - _default_benchmark_parameters
   - _self_
 
-name: BraninCurrin
+name: yahpo
 
 objectives:
-  - name: branin
-    limits: [0, 350]
-    lower_is_better: True
-  - name: currin
-    limits: [0, 12]
+  - name: acc
+    limits: [0, 1.0]
+    lower_is_better: False
+  - name: memory
+    limits: [0, 21]
     lower_is_better: True
 
 track_metrics: []
 
 benchmark_import:
-  import_from: BenchmarkTools.benchmarks.toy_benchmark
-  import_name: BOTestFunctionBenchmark
+  import_from: hpobench.container.surrogates.yahpo_gym
+  import_name: YAHPOGymMOBenchmark
 
 benchmark_parameters:
-  function_name: BraninCurrin
-  function_kwargs:
-    negate: false
+  scenario: rbv2_xgboost
+  instance: 28
+  multi_thread: False
 
 optimization_parameters:
   tae_limit: 100

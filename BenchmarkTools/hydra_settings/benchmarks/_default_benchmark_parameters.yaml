@@ -4,11 +4,9 @@ objectives: ???
 
 track_metrics: ???
 
-# benchmark_type: HPOBenchContainer HPOBenchLocal BotorchToyBenchmark
-
 benchmark_import:
   import_from: ???
-  benchmark_name: ???
+  import_name: ???
 
 benchmark_parameters: ???
 
