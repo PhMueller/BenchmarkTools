@@ -1,0 +1,11 @@
+defaults:
+  - _default_optimizer_settings
+  - _self_
+
+name: random_search
+
+optimizer_import:
+  import_from: BenchmarkToolsOptimizers.optimizers.random_search.random_search
+  import_name: RandomSearchOptimizer
+
+optimizer_parameters:

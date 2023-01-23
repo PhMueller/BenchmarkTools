@@ -2,15 +2,16 @@ name: ???
 
 objectives: ???
 
-track_metrics: ???
+track_metrics:
+  -
 
-# benchmark_type: HPOBenchContainer HPOBenchLocal BotorchToyBenchmark
+benchmark_type: ??? # one of: HPOBenchContainer HPOBenchLocal BotorchToyBenchmark, see constants.BenchmarkTypes
 
 benchmark_import:
   import_from: ???
-  benchmark_name: ???
+  import_name: ???
 
-benchmark_parameters: ???
+benchmark_parameters:
 
 optimization_parameters:
   tae_limit: ???

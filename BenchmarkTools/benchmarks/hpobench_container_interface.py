@@ -8,7 +8,7 @@ from hpobench.abstract_benchmark import AbstractSingleObjectiveBenchmark, Abstra
 from hpobench.container.client_abstract_benchmark import AbstractBenchmarkClient, AbstractMOBenchmarkClient
 from torch import Tensor
 
-from BenchmarkTools.utils.loader_tools import load_object, load_benchmark
+from BenchmarkTools.utils.loader_tools import load_object
 
 # from MOHPOBenchExperimentUtils.core.multiobjective_experiment_new import MultiObjectiveSimpleExperiment
 # from MOHPOBenchExperimentUtils.core.target_normalization import TargetScaler, get_scaler
@@ -29,7 +29,7 @@ class HPOBenchContainerInterface(AbstractMultiObjectiveBenchmark):
 
     def init_benchmark(self) -> None:
         if self.benchmark is None:
-            benchmark_object = load_benchmark(**self.settings['benchmark_import'])
+            benchmark_object = load_object(**self.settings['benchmark_import'])
             self.benchmark: Union[AbstractMOBenchmarkClient, AbstractBenchmarkClient] = benchmark_object(
                 container_source=config_file.container_source,
                 rng=self.rng,

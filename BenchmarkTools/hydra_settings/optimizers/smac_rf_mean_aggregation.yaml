@@ -1,0 +1,22 @@
+defaults:
+  - _default_optimizer_settings
+  - _self_
+
+name: random_search
+
+optimizer_import:
+  import_from: BenchmarkToolsOptimizers.optimizers.smac.smac
+  import_name: SMACOptimizer
+
+optimizer_parameters:
+  smac_facade: HyperparameterOptimizationFacade
+  mo_algorithm:
+    name: MeanAggregationStrategy
+    parameters:
+      objective_weights: null
+  deterministic: true
+
+plotting:
+  display_name: SMAC$_{RF}^{mean}$
+  color: "black"
+  linestyle: dashed

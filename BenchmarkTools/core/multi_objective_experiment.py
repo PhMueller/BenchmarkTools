@@ -8,8 +8,8 @@ import ConfigSpace as CS
 import optuna
 
 from BenchmarkTools import logger
-from BenchmarkTools.utils.constants import BenchmarkToolsConstants
-from BenchmarkTools.utils.exceptions import BudgetExhaustedException
+from BenchmarkTools.core.constants import BenchmarkToolsConstants
+from BenchmarkTools.core.exceptions import BudgetExhaustedException
 
 
 class MultiObjectiveExperiment:
@@ -31,7 +31,10 @@ class MultiObjectiveExperiment:
         self.study_name = self.benchmark_settings['name'] + '_' + self.optimizer_settings['name'] + '_' + str(self.run_id)
 
         self.search_space = benchmark.get_configuration_space(seed=run_id)
+        self.fidelity_space = benchmark.get_fidelity_space(seed=run_id)
         self.optuna_distributions = self._configuration_space_cs_optuna_distributions(self.search_space)
+        self.optuna_distributions_fs = self._configuration_space_cs_optuna_distributions(self.fidelity_space)
+        self.optuna_distributions = {**self.optuna_distributions, **self.optuna_distributions_fs}
 
         self.initial_time = time()
         self.num_configs_evaluated = -1
@@ -58,6 +61,7 @@ class MultiObjectiveExperiment:
         self.try_start_study()
         self.start_time()
         self.optimizer.link_experiment(experiment=self)
+        self.optimizer.init(seed=self.run_id)
 
     def start_time(self):
         self.initial_time = time()
@@ -71,6 +75,9 @@ class MultiObjectiveExperiment:
         """
         # TODO: Adaptive storage dir
         # TODO: Adaptive study name
+        # TODO: Add function to continue a run?
+        # What happens if a study is already present? -> Delete it or continue it?
+        # For now delete it. But a continue option would be nice.
         load_if_exists = False
 
         if os.name == 'posix':
@@ -108,9 +115,6 @@ class MultiObjectiveExperiment:
         }
         for k, v in experiment_information.items():
             self.study.set_user_attr(k, v)
-
-        # optuna.delete_study
-        # TODO: When continue: update optimization limits
 
     def evaluate_configuration(
             self,
@@ -161,16 +165,11 @@ class MultiObjectiveExperiment:
         # --------------------------- CHECK RUN LIMITS -----------------------------------------------------------------
 
         # --------------------------- PREPARE CONFIG AND FIDELITY ------------------------------------------------------
+        # We combine the configuration and the fidelity dict to make it trackable for optuna.
         if fidelity is not None:
-            configuration = {**configuration, **fidelity}
-
-        # # We have to add missing parameters (even if they are not active), since ax will raise an
-        # # error otherwise. HPObench will remove them before running the configuration, therefore
-        # # we should be okay with this solution. (more or less)
-        # for key in self.cs_search_space.get_hyperparameter_names():
-        #     if key not in configuration:
-        #         missing_hp = self.cs_search_space.get_hyperparameter(key)
-        #         configuration[key] = missing_hp.default_value
+            optuna_configuration = {**configuration, **fidelity}
+        else:
+            optuna_configuration = configuration
         # --------------------------- PREPARE CONFIG AND FIDELITY ------------------------------------------------------
 
         # --------------------------- EVALUATE TRIAL AND LOG RESULTS ---------------------------------------------------
@@ -179,8 +178,10 @@ class MultiObjectiveExperiment:
         # Create a trial that is assigned to the function evaluation
         trial = optuna.create_trial(
             state=optuna.trial.TrialState.RUNNING,
-            params=configuration,
-            distributions={name: dist for name, dist in self.optuna_distributions.items() if name in configuration.keys()},
+            params=optuna_configuration,
+            distributions={
+                name: dist for name, dist in self.optuna_distributions.items() if name in optuna_configuration.keys()
+            },
         )
         # TODO: Assigning a run_id might be better with a lock! In case of parallel optimization
         trial.number = self.num_configs_evaluated
@@ -282,4 +283,3 @@ class MultiObjectiveExperiment:
                 raise NotImplementedError('Unknown HP Type')
             distributions[hp.name] = dist
         return distributions
-

@@ -19,3 +19,9 @@ class BenchmarkToolsTrackMetrics(_BaseEnum):
 class BenchmarkToolsConstants(_BaseEnum):
     FINISHED_FLAG = 'RUN_HAS_FINISHED.FLAG'
     DATABASE_NAME = 'run_storage.db'
+
+
+class BenchmarkTypes(_BaseEnum):
+    HPOBENCH_CONTAINER = 'HPOBENCH_CONTAINER'
+    HPOBENCH_LOCAL = 'HPOBENCH_LOCAL'
+    BOTORCH_TOY = 'BOTORCH_TOY'
