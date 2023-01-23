@@ -19,6 +19,8 @@ class BenchmarkToolsTrackMetrics(_BaseEnum):
 class BenchmarkToolsConstants(_BaseEnum):
     FINISHED_FLAG = 'RUN_HAS_FINISHED.FLAG'
     DATABASE_NAME = 'run_storage.db'
+    OPT_HISTORY_NAME = 'optimization_history.csv'
+    MO_EMP_PF_SUMMARY_FILE_NAME = 'summary_empirical_pareto_front.json'
 
 
 class BenchmarkTypes(_BaseEnum):

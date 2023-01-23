@@ -1,0 +1,31 @@
+defaults:
+  - _default_benchmark_parameters
+  - _self_
+
+name: yahpo
+
+objectives:
+  - name: acc
+    limits: [0, 1.0]
+    lower_is_better: False
+  - name: memory
+    limits: [0, 21]
+    lower_is_better: True
+
+track_metrics: []
+
+benchmark_import:
+  import_from: hpobench.container.surrogates.yahpo_gym
+  import_name: YAHPOGymMOBenchmark
+
+benchmark_parameters:
+  scenario: rbv2_xgboost
+  instance: 28
+  multi_thread: False
+
+optimization_parameters:
+  tae_limit: 100
+  wallclock_limit_in_s: 1800
+  estimated_cost_limit_in_s: 1800
+  is_surrogate: True
+

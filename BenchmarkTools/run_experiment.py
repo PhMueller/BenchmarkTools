@@ -11,7 +11,6 @@ from BenchmarkTools.core.exceptions import AlreadyFinishedException
 from BenchmarkTools.utils.loader_tools import load_object
 
 
-# TODO: Write wrapper for tracking experiments!
 def run(benchmark_name: str,
         benchmark_settings: Union[Dict, DictConfig],
         optimizer_name: str,
@@ -45,7 +44,7 @@ def run(benchmark_name: str,
             settings=benchmark_settings, rng=run_id, keep_alive=True
         )
         main_benchmark.init_benchmark()
-        benchmark: HPOBenchContainerInterface = HPOBenchContainerInterface(
+        benchmark: HPOBenchContainerInterface = benchmark_object(
             settings=benchmark_settings, rng=run_id,
             socket_id=main_benchmark.socket_id, keep_alive=False
         )
@@ -102,14 +101,22 @@ def run(benchmark_name: str,
 
     # -------------------- EVALUATION ----------------------------------------------------------------------------------
     trials_dataframe = experiment.study.trials_dataframe()
-    trials_dataframe.to_csv(output_path / 'optimization_history.csv')
+    rename_dict = {f'values_{i}': obj_name for i, obj_name in enumerate(experiment.objective_names)}
+    trials_dataframe = trials_dataframe.rename(columns=rename_dict)
+    trials_dataframe.to_csv(output_path / BenchmarkToolsConstants.OPT_HISTORY_NAME)
     logger.info(f'Run results exported to {output_path / "optimization_history.csv"}')
     # -------------------- EVALUATION ----------------------------------------------------------------------------------
 
     # -------------------- VISUALIZATION -------------------------------------------------------------------------------
     import optuna
-    fig = optuna.visualization.plot_pareto_front(experiment.study, target_names=experiment.objective_names)
+    fig = optuna.visualization.plot_pareto_front(
+        experiment.study, target_names=experiment.objective_names
+    )
     fig.show()
-    fig = optuna.visualization.plot_optimization_history(experiment.study, target=lambda trial: trial.values[0], target_name=experiment.objective_names[0])
-    fig.show()
+
+    for i in range(len(experiment.objective_names)):
+        fig = optuna.visualization.plot_optimization_history(
+            experiment.study, target=lambda trial: trial.values[i], target_name=experiment.objective_names[i]
+        )
+        fig.show()
     # -------------------- VISUALIZATION -------------------------------------------------------------------------------

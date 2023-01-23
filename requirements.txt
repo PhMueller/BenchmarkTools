@@ -5,3 +5,5 @@ loguru
 # botorch
 optuna
 pandas
+matplotlib
+hydra-core
