@@ -69,7 +69,6 @@ def _make_marker(
         }
 
 
-# TODO: Make a figure per objective! Plotly can have multiple legends ( one per subplot).
 def plot_trajectories_per_objective(
         data_containers_by_optimizer: Dict[str, DataContainer],
         output_dir: Path,
@@ -77,6 +76,7 @@ def plot_trajectories_per_objective(
 ):
     n_objectives = None
     figures = None
+    # TODO: Rename that feature and make it a parameter to the function!
     x_axis = 'number'  # Time
 
     # Aggregate the runhistories of each optimizer
