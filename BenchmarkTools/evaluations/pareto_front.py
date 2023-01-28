@@ -15,29 +15,13 @@ from collections import defaultdict
 from BenchmarkTools.evaluations.data_container import combine_multiple_data_container
 import optuna
 from BenchmarkTools.utils.loader_tools import load_optimizer_settings
+from BenchmarkTools.evaluations.plotting_utils import make_marker
 from optuna.visualization._pareto_front import _get_pareto_front_info, plot_pareto_front
 from plotly.graph_objects import Figure
 import plotly.graph_objects as go
 
 from omegaconf import DictConfig
 
-
-def _make_marker(
-    plotting_settings: DictConfig,
-    dominated_trials: bool = False,
-) -> Dict[str, Any]:
-
-    if dominated_trials:
-        return {
-            "line": {"width": 0.5, "color": 'DarkSlateGrey', },
-            "color": plotting_settings.color,
-            'opacity': 0.5
-        }
-    else:
-        return {
-            "line": {"width": 0.5, "color": 'DarkSlateGrey'},
-            "color": plotting_settings.color
-        }
 
 
 def plot_pareto_front_one_experiment(data_containers: List[DataContainer], output_dir: Path, benchmark_name: str):
@@ -49,8 +33,8 @@ def plot_pareto_front_one_experiment(data_containers: List[DataContainer], outpu
     for data_container in data_containers_combined:
         plotting_settings = load_optimizer_settings(data_container.optimizer).plotting
 
-        non_dominated_marker = _make_marker(plotting_settings=plotting_settings, dominated_trials=False)
-        dominated_marker = _make_marker(plotting_settings=plotting_settings, dominated_trials=True)
+        non_dominated_marker = make_marker(plotting_settings=plotting_settings, opacity=1.0)
+        dominated_marker = make_marker(plotting_settings=plotting_settings, opacity=0.3)
 
         pf_infos = _get_pareto_front_info(
             study=data_container.study,

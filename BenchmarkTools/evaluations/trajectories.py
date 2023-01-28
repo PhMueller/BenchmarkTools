@@ -1,72 +1,20 @@
 from pathlib import Path
-from typing import Union
 
 import pandas as pd
 
 from BenchmarkTools.evaluations.data_container import (
-    DataContainerFromSQLite,
     load_data_containers_from_directory,
-    combine_multiple_data_container,
     DataContainer,
 )
 
 from BenchmarkTools import logger
-from typing import Dict, Any, List, Tuple
-import numpy as np
+from typing import Dict, List
 from collections import defaultdict
-from BenchmarkTools.evaluations.data_container import combine_multiple_data_container
-import optuna
+
+from BenchmarkTools.evaluations.plotting_utils import color_to_rgba_str, make_marker
 from BenchmarkTools.utils.loader_tools import load_optimizer_settings
-from optuna.visualization._pareto_front import _get_pareto_front_info, plot_pareto_front
 from plotly.graph_objects import Figure
 import plotly.graph_objects as go
-
-from omegaconf import DictConfig
-
-
-def color_to_rgba(color: Union[tuple, str], opacity: float = 1.0) -> Tuple[int, int, int, float]:
-    logger.info(f'Start to cast color: {color} to rgba values.')
-    # It is already in rgb
-    if isinstance(color, tuple):
-        if len(color) == 3:
-            color = color + (opacity, )
-        return color
-
-    # Given in hex format
-    if isinstance(color, str):
-        if color.startswith('#'):
-            hex_color = color.lstrip('#')
-            if len(hex_color) == 3:
-                hex_color = hex_color * 2
-            return int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16), opacity
-        else:
-            from matplotlib import colors
-            return colors.to_rgba(color, alpha=opacity)
-    raise ValueError(f'Unknown color: {color}')
-
-
-def color_to_rgba_str(color: str, opacity: float = 1.0):
-    rgba_color = color_to_rgba(color, opacity=opacity)
-    rgba_color_str = f'rgba{str(rgba_color)}'
-    return rgba_color_str
-
-
-def _make_marker(
-    plotting_settings: DictConfig,
-    dominated_trials: bool = False,
-) -> Dict[str, Any]:
-
-    if dominated_trials:
-        opacity = 0.3
-        return {
-            "line": {"width": 0.5, "color": 'DarkSlateGrey'},
-            "color": color_to_rgba_str(plotting_settings.color, opacity=opacity),
-        }
-    else:
-        return {
-            "line": {"width": 0.5, "color": 'DarkSlateGrey'},
-            "color": color_to_rgba_str(plotting_settings.color, opacity=1.0),
-        }
 
 
 def plot_trajectories_per_objective(
@@ -151,7 +99,7 @@ def plot_trajectories_per_objective(
                     y=mean,
                     mode='lines',
                     line={'dash': plotting_settings.linestyle},
-                    marker=_make_marker(plotting_settings=plotting_settings, dominated_trials=False),
+                    marker=make_marker(plotting_settings=plotting_settings, opacity=1.0),
                     showlegend=True,
                     name=plotting_settings.display_name
                 ),
@@ -198,7 +146,7 @@ def plot_trajectories_per_objective(
                     y=mean.iloc[last_valid_ids],
                     mode='markers',
                     showlegend=False,
-                    marker=_make_marker(plotting_settings, dominated_trials=False),
+                    marker=make_marker(plotting_settings, opacity=1.0),
                 ),
             )
 
