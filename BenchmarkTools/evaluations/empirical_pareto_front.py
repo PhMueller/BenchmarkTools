@@ -11,8 +11,8 @@ import optuna.visualization
 import tqdm
 import yaml
 
-from BenchmarkTools.utils.constants import BenchmarkToolsConstants
-from BenchmarkTools.evaluations.data_container import DataContainer, combine_multiple_data_container
+from BenchmarkTools.core.constants import BenchmarkToolsConstants
+from BenchmarkTools.evaluations.data_container import DataContainerFromSQLite, combine_multiple_data_container
 
 from optuna._hypervolume import WFG
 from optuna.study._multi_objective import _get_pareto_front_trials, _normalize_value

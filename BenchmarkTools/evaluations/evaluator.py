@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 
 from BenchmarkTools.evaluations.data_container import (
-    DataContainer,
+    DataContainerFromSQLite,
     load_data_containers_from_directory,
     combine_multiple_data_container
 )

@@ -28,5 +28,5 @@ benchmark_parameters:
 optimization_parameters:
   tae_limit: 500
   wallclock_limit_in_s: 1800
-  estimated_cost_limit_in_s: 1800
+  estimated_cost_limit_in_s: 7200
   is_surrogate: True

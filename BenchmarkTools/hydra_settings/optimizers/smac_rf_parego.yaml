@@ -2,7 +2,7 @@ defaults:
   - _default_optimizer_settings
   - _self_
 
-name: smac_rf_mean_aggregation
+name: smac_rf_parego
 
 optimizer_import:
   import_from: BenchmarkToolsOptimizers.optimizers.smac.smac
@@ -11,12 +11,12 @@ optimizer_import:
 optimizer_parameters:
   smac_facade: HyperparameterOptimizationFacade
   mo_algorithm:
-    name: MeanAggregationStrategy
+    name: ParEGO
     parameters:
-      objective_weights: null
+      rho: 0.05
   deterministic: true
 
 plotting:
-  display_name: $SMAC_{RF}^{mean}$
+  display_name: $SMAC_{RF}^{parego}$
   color: "black"
-  linestyle: dash
+  linestyle: solid

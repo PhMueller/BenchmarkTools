@@ -1,7 +1,6 @@
 import datetime
 import os
 from pathlib import Path
-from time import time
 from typing import Dict
 
 import ConfigSpace as CS
@@ -32,25 +31,23 @@ class MultiObjectiveExperiment:
 
         self.search_space = benchmark.get_configuration_space(seed=run_id)
         self.fidelity_space = benchmark.get_fidelity_space(seed=run_id)
+        self.fidelity_names = [hp.name for hp in self.fidelity_space.get_hyperparameters()]
+
         self.optuna_distributions = self._configuration_space_cs_optuna_distributions(self.search_space)
         self.optuna_distributions_fs = self._configuration_space_cs_optuna_distributions(self.fidelity_space)
         self.optuna_distributions = {**self.optuna_distributions, **self.optuna_distributions_fs}
 
-        self.initial_time = time()
-        self.num_configs_evaluated = -1
-        self.accumulated_surrogate_cost = 0
-        self.time_for_saving = 0
-        self.used_wallclock_time = 0
-        self.used_total_cost = 0
-
-        self.tae_limit = self.benchmark_settings['optimization_parameters']['tae_limit']
-        self.wallclock_limit_in_s = self.benchmark_settings['optimization_parameters']['wallclock_limit_in_s']
-        self.estimated_cost_limit_in_s = self.benchmark_settings['optimization_parameters']['estimated_cost_limit_in_s']
-        self.is_surrogate = self.benchmark_settings['optimization_parameters']['is_surrogate']
+        from BenchmarkTools.core.bookkeeper import FileBookKeeper
+        self.bookkeeper = FileBookKeeper(
+            benchmark_settings=self.benchmark_settings,
+            lock_dir=self.output_path / 'lock_dir',
+            resource_file_dir=self.output_path
+        )
 
         self.study: [optuna.Study, None] = None
         self.storage_path = self.output_path / BenchmarkToolsConstants.DATABASE_NAME
 
+        self.is_surrogate = self.benchmark_settings['optimization_parameters']['is_surrogate']
         self.objective_names = [obj['name'] for obj in self.benchmark_settings['objectives']]
         self.directions = [
             'minimize' if obj['lower_is_better'] else 'maximize'
@@ -59,15 +56,9 @@ class MultiObjectiveExperiment:
 
     def setup(self):
         self.try_start_study()
-        self.start_time()
+        self.bookkeeper.start_timer()
         self.optimizer.link_experiment(experiment=self)
         self.optimizer.init(seed=self.run_id)
-
-    def start_time(self):
-        self.initial_time = time()
-        self.used_wallclock_time = 0
-        self.used_total_cost = 0
-        self.accumulated_surrogate_cost = 0
 
     def try_start_study(self):
         """
@@ -123,6 +114,10 @@ class MultiObjectiveExperiment:
     ) -> Dict:
 
         """
+        # TODO: Make this function multi-thread safe:
+        #       1) Extract tracking of time limits: Maybe write a SQLite database or in a file with a lock.
+        #       2) Extract tracking of run results (this should actually already be multi-thread safe by optuna)
+
         This function evaluates a configuration with a given fidelity (optional).
         It tracks all trials / results using the optuna study.
 
@@ -140,28 +135,9 @@ class MultiObjectiveExperiment:
         """
         if isinstance(configuration, CS.Configuration):
             configuration = configuration.get_dictionary()
-        # --------------------------- UPDATE TIMER ---------------------------------------------------------------------
-        self.used_wallclock_time = time() - self.initial_time
-        # --------------------------- UPDATE TIMER ---------------------------------------------------------------------
 
         # --------------------------- CHECK RUN LIMITS -----------------------------------------------------------------
-        # Check that the wallclock time limit is not reached
-        if self.used_wallclock_time >= self.wallclock_limit_in_s:
-            logger.warning(f'Wallclock Time Limit Reached')
-            raise BudgetExhaustedException(f'Wallclock Time Limit Reached: {self.wallclock_limit_in_s}')
-
-        # If we evaluate a surrogate model, then we also care about the predicted costs
-        self.used_total_cost = self.used_wallclock_time + self.accumulated_surrogate_cost
-        if self.is_surrogate and (self.used_total_cost >= self.estimated_cost_limit_in_s):
-            logger.warning(f'Surrogate Costs Limit Reached')
-            raise BudgetExhaustedException(f'Total Time Limit Reached: {self.estimated_cost_limit_in_s}')
-
-        # By default, the tae limit is not active. If it is set to -1, 1000 * #hps is used.
-        if self.tae_limit is not None and self.num_configs_evaluated > self.tae_limit:
-            logger.warning('Target Execution limit is reached.')
-            raise BudgetExhaustedException(
-                f'Total Number of Target Executions Limit is reached. {self.num_configs_evaluated}'
-            )
+        self.bookkeeper.check_optimization_limits()
         # --------------------------- CHECK RUN LIMITS -----------------------------------------------------------------
 
         # --------------------------- PREPARE CONFIG AND FIDELITY ------------------------------------------------------
@@ -173,7 +149,7 @@ class MultiObjectiveExperiment:
         # --------------------------- PREPARE CONFIG AND FIDELITY ------------------------------------------------------
 
         # --------------------------- EVALUATE TRIAL AND LOG RESULTS ---------------------------------------------------
-        self.num_configs_evaluated += 1
+        new_trial_number = self.bookkeeper.increase_num_tae_calls_and_get_num_tae_calls(delta_tae_calls=1)
 
         # Create a trial that is assigned to the function evaluation
         trial = optuna.create_trial(
@@ -183,14 +159,20 @@ class MultiObjectiveExperiment:
                 name: dist for name, dist in self.optuna_distributions.items() if name in optuna_configuration.keys()
             },
         )
-        # TODO: Assigning a run_id might be better with a lock! In case of parallel optimization
-        trial.number = self.num_configs_evaluated
+        trial.number = new_trial_number
 
         # Query the benchmark. The Output should be in the return format of the HPOBench-Experiments
         result_dict: Dict = self.benchmark.objective_function(configuration=configuration, fidelity=fidelity)
 
         # Log the results to the optuna study
         trial.values = [result_dict['function_value'][obj_name] for obj_name in self.objective_names]
+
+        # TODO: Set additional information!
+        additional_info = result_dict['info']
+        additional_info.update(**{'cost': result_dict['cost']})
+        for k, v in additional_info.values:
+            trial.set_user_attr(f'info_{k}', v)
+
         trial.state = optuna.trial.TrialState.COMPLETE
         trial.datetime_complete = datetime.datetime.now()
         self.study.add_trial(trial)
@@ -198,32 +180,16 @@ class MultiObjectiveExperiment:
 
         # --------------------------- UPDATE TIMER --------------------------------
         if self.is_surrogate:
-            self.accumulated_surrogate_cost += result_dict['cost']
+            self.bookkeeper.increase_used_resources(delta_surrogate_cost=result_dict['cost'])
         # --------------------------- UPDATE TIMER --------------------------------
 
         # --------------------------- POST PROCESS --------------------------------
         eval_interval = 100 if self.is_surrogate else 10
-        if (self.num_configs_evaluated % eval_interval) == 0:
-            remaining_time = self.wallclock_limit_in_s - self.used_wallclock_time
-            logger.info(f'WallClockTime left: {remaining_time:10.4f}s ({remaining_time/3600:.4f}h)')
-            if self.is_surrogate:
-                remaining_time = self.estimated_cost_limit_in_s - self.used_total_cost
-                logger.info(f'EstimatedTime left: {remaining_time:10.4f}s ({remaining_time/3600:.4f}h)')
-            if self.tae_limit is not None:
-                logger.info(f'Number of TAE: {self.num_configs_evaluated:10d}|{self.tae_limit}')
-            else:
-                logger.info(f'Number of TAE: {self.num_configs_evaluated:10d}| INF')
+        if (new_trial_number % eval_interval) == 0:
+            self.bookkeeper.log_currently_used_resources()
 
         # TODO: Callbacks
         #  Example: Add Save-Callback
-        # save_interval = 10000 if self.is_surrogate else 10
-        # if (self.num_configs_evaluated % save_interval) == 0:
-        #     # Saving intermediate results is pretty expensive
-        #     t = time()
-        #     save_output(self, self.output_path, finished=False, surrogate=self.is_surrogate)
-        #     time_for_saving = time() - t
-        #     logger.info(f'Saved Experiment to Pickle took {time_for_saving:.2f}s')
-
         return result_dict
 
     def run(self):

@@ -1,35 +1,28 @@
-from pathlib import Path
 from datetime import datetime
 from oslo_concurrency import lockutils
 import pandas as pd
 from BenchmarkTools import logger
-import pickle
-import shutil
 from pathlib import Path
-from typing import Any, Union, Dict
 from pprint import pformat
 import traceback
 
-import numpy as np
-from importlib import import_module
-
-from tqdm import tqdm
 from BenchmarkTools.core.exceptions import AlreadyFinishedException, BudgetExhaustedException
 
 
 def wrapper_track_run_stats(func_to_wrap):
-    def track_run_stats(experiment_name, experiment_settings, optimizer_name, optimizer_settings,
+
+    def track_run_stats(benchmark_name, benchmark_settings, optimizer_name, optimizer_settings,
                         run_id, output_path, debug, *args, **kwargs):
 
         run_state_dir = Path(output_path) / '_run_states'
-        lock_dir = run_state_dir / 'lock_collect_runs'
+        lock_dir = run_state_dir / 'lock_run_states'
         lock_dir.mkdir(exist_ok=True, parents=True)
         state_file = run_state_dir / 'run_states.csv'
         start_time = datetime.now()
 
-        run_dir = Path(output_path) / experiment_name / optimizer_name / str(run_id)
+        run_dir = Path(output_path) / benchmark_name / optimizer_name / str(run_id)
 
-        @lockutils.synchronized('not_thread_process_safe', external=True, lock_path=str(lock_dir), delay=0.01)
+        @lockutils.synchronized('not_thread_process_safe', external=True, lock_path=str(lock_dir), delay=0.001)
         def update_state_file(entry, state_file, col_names, check_duplicates_on):
             new_df = pd.DataFrame([entry])
 
@@ -40,14 +33,15 @@ def wrapper_track_run_stats(func_to_wrap):
             new_df = new_df.drop_duplicates(subset=check_duplicates_on, keep='last')
             new_df.to_csv(state_file, sep=';', header=None, index=False)
 
-        skip_writing = False
         crash = False
         exception = None
         tb = None
         try:
             logger.debug('Start evaluation')
-            func_to_wrap(experiment_name, experiment_settings, optimizer_name, optimizer_settings,
-                        run_id, output_path, debug, *args, **kwargs)
+            func_to_wrap(
+                benchmark_name, benchmark_settings, optimizer_name, optimizer_settings,
+                run_id, output_path, debug, *args, **kwargs
+            )
             logger.info('Finished without exception')
         except Exception as e:
             logger.info('Exception caught: -> Going to save the run state')
@@ -62,7 +56,7 @@ def wrapper_track_run_stats(func_to_wrap):
             'time_str': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-4],
             'wallclock_time_in_s': (datetime.now() - start_time).seconds,
             'result_dir': output_path,
-            'benchmark': experiment_name,
+            'benchmark': benchmark_name,
             'optimizer': optimizer_name,
             'run_id': int(run_id),
             'status': 'CRASH' if crash else 'SUCCESS',

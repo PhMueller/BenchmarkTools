@@ -9,3 +9,8 @@ optimizer_import:
   import_name: RandomSearchOptimizer
 
 optimizer_parameters:
+
+plotting:
+  display_name: RandomSearch
+  color: "red"
+  linestyle: solid

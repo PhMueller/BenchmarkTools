@@ -5,3 +5,14 @@ optimizer_import:
   import_name: ???
 
 optimizer_parameters: ???
+
+plotting:
+  name: ???
+  color: ???
+
+  # The linestyle can be specified in two ways:
+  # a) One of the following dash styles:
+  #    [ 'solid', 'dot', 'dash', 'longdash', 'dashdot', 'longdashdot' ]
+  # b) A string containing a dash length list in pixels or percentages
+  #    e.g. '5px 10px 2px 2px', '5, 10, 2, 2', '10% 20% 40%', etc.
+  linestyle: solid

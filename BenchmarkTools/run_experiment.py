@@ -8,9 +8,11 @@ from BenchmarkTools.benchmarks.hpobench_container_interface import HPOBenchConta
 from BenchmarkTools.core.multi_objective_experiment import MultiObjectiveExperiment
 from BenchmarkTools.core.constants import BenchmarkToolsConstants, BenchmarkTypes
 from BenchmarkTools.core.exceptions import AlreadyFinishedException
+from BenchmarkTools.core.run_tracking import wrapper_track_run_stats
 from BenchmarkTools.utils.loader_tools import load_object
 
 
+@wrapper_track_run_stats
 def run(benchmark_name: str,
         benchmark_settings: Union[Dict, DictConfig],
         optimizer_name: str,
@@ -44,7 +46,7 @@ def run(benchmark_name: str,
             settings=benchmark_settings, rng=run_id, keep_alive=True
         )
         main_benchmark.init_benchmark()
-        benchmark: HPOBenchContainerInterface = benchmark_object(
+        benchmark: HPOBenchContainerInterface = HPOBenchContainerInterface(
             settings=benchmark_settings, rng=run_id,
             socket_id=main_benchmark.socket_id, keep_alive=False
         )
@@ -63,7 +65,7 @@ def run(benchmark_name: str,
     )
 
     # The experiment host all HPO related information, e.g. time limits. It stops the HPO run if the HPO has hit the
-    # run limits. It also takes care of the book-keeping.
+    # run limits. It also takes care of the result logging.
     experiment = MultiObjectiveExperiment(
         benchmark_settings=benchmark_settings,
         benchmark=benchmark,
@@ -101,22 +103,25 @@ def run(benchmark_name: str,
 
     # -------------------- EVALUATION ----------------------------------------------------------------------------------
     trials_dataframe = experiment.study.trials_dataframe()
-    rename_dict = {f'values_{i}': obj_name for i, obj_name in enumerate(experiment.objective_names)}
+    rename_dict = {
+        **{f'values_{i}': obj_name for i, obj_name in enumerate(experiment.objective_names)},
+        **{f'params_{f_name}': f'fidelity_{f_name}' for f_name in experiment.fidelity_names}
+    }
     trials_dataframe = trials_dataframe.rename(columns=rename_dict)
     trials_dataframe.to_csv(output_path / BenchmarkToolsConstants.OPT_HISTORY_NAME)
     logger.info(f'Run results exported to {output_path / "optimization_history.csv"}')
     # -------------------- EVALUATION ----------------------------------------------------------------------------------
 
     # -------------------- VISUALIZATION -------------------------------------------------------------------------------
-    import optuna
-    fig = optuna.visualization.plot_pareto_front(
-        experiment.study, target_names=experiment.objective_names
-    )
-    fig.show()
+    # import optuna
+    # fig = optuna.visualization.plot_pareto_front(
+    #     experiment.study, target_names=experiment.objective_names
+    # )
+    # fig.show()
 
-    for i in range(len(experiment.objective_names)):
-        fig = optuna.visualization.plot_optimization_history(
-            experiment.study, target=lambda trial: trial.values[i], target_name=experiment.objective_names[i]
-        )
-        fig.show()
+    # for i in range(len(experiment.objective_names)):
+    #     fig = optuna.visualization.plot_optimization_history(
+    #         experiment.study, target=lambda trial: trial.values[i], target_name=experiment.objective_names[i]
+    #     )
+    #     fig.show()
     # -------------------- VISUALIZATION -------------------------------------------------------------------------------
