@@ -1,12 +1,13 @@
 import abc
-from abc import ABC
+import json
+from pathlib import Path
 from time import time
 from typing import Dict, Optional
+
+from oslo_concurrency import lockutils
+
 from BenchmarkTools import logger
 from BenchmarkTools.core.exceptions import BudgetExhaustedException
-from pathlib import Path
-from oslo_concurrency import lockutils
-import json
 
 
 class BookKeeper(abc.ABC):

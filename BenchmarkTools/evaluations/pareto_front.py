@@ -1,27 +1,20 @@
+from collections import defaultdict
 from pathlib import Path
-from typing import Union
+from typing import List
 
-from BenchmarkTools.evaluations.data_container import (
-    DataContainerFromSQLite,
-    load_data_containers_from_directory,
-    combine_multiple_data_container,
-    DataContainer,
-)
+import numpy as np
+import plotly.graph_objects as go
+from optuna.visualization._pareto_front import _get_pareto_front_info
+from plotly.graph_objects import Figure
 
 from BenchmarkTools import logger
-from typing import Dict, Any, List
-import numpy as np
-from collections import defaultdict
 from BenchmarkTools.evaluations.data_container import combine_multiple_data_container
-import optuna
-from BenchmarkTools.utils.loader_tools import load_optimizer_settings
+from BenchmarkTools.evaluations.data_container import (
+    load_data_containers_from_directory,
+    DataContainer,
+)
 from BenchmarkTools.evaluations.plotting_utils import make_marker
-from optuna.visualization._pareto_front import _get_pareto_front_info, plot_pareto_front
-from plotly.graph_objects import Figure
-import plotly.graph_objects as go
-
-from omegaconf import DictConfig
-
+from BenchmarkTools.utils.loader_tools import load_optimizer_settings
 
 
 def plot_pareto_front_one_experiment(data_containers: List[DataContainer], output_dir: Path, benchmark_name: str):

@@ -1,7 +1,8 @@
 # -*- encoding: utf-8 -*-
-import setuptools
 import json
 import os
+
+import setuptools
 
 
 def get_extra_requirements():

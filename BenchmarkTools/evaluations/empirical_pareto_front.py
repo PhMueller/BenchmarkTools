@@ -4,19 +4,17 @@ It scraps all results in a certain directory and computes the pareto front acros
 configurations.
 """
 
-from typing import Union
 from pathlib import Path
+from typing import Union
 
+import numpy as np
 import optuna.visualization
-import tqdm
 import yaml
-
-from BenchmarkTools.core.constants import BenchmarkToolsConstants
-from BenchmarkTools.evaluations.data_container import DataContainerFromSQLite, combine_multiple_data_container
-
 from optuna._hypervolume import WFG
 from optuna.study._multi_objective import _get_pareto_front_trials, _normalize_value
-import numpy as np
+
+from BenchmarkTools.core.constants import BenchmarkToolsConstants
+from BenchmarkTools.evaluations.data_container import combine_multiple_data_container
 
 
 def get_empirical_pareto_front(

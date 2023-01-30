@@ -1,20 +1,18 @@
+from collections import defaultdict
 from pathlib import Path
+from typing import Dict, List
 
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.graph_objects import Figure
 
+from BenchmarkTools import logger
 from BenchmarkTools.evaluations.data_container import (
     load_data_containers_from_directory,
     DataContainer,
 )
-
-from BenchmarkTools import logger
-from typing import Dict, List
-from collections import defaultdict
-
 from BenchmarkTools.evaluations.plotting_utils import color_to_rgba_str, make_marker
 from BenchmarkTools.utils.loader_tools import load_optimizer_settings
-from plotly.graph_objects import Figure
-import plotly.graph_objects as go
 
 
 def plot_trajectories_per_objective(

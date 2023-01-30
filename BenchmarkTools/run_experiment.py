@@ -1,13 +1,14 @@
 from pathlib import Path
 from typing import Dict, Union
+
 from omegaconf import DictConfig
 
 from BenchmarkTools import logger
-from BenchmarkTools.benchmarks.toy_benchmark import BOTestFunctionBenchmark
 from BenchmarkTools.benchmarks.hpobench_container_interface import HPOBenchContainerInterface
-from BenchmarkTools.core.multi_objective_experiment import MultiObjectiveExperiment
+from BenchmarkTools.benchmarks.toy_benchmark import BOTestFunctionBenchmark
 from BenchmarkTools.core.constants import BenchmarkToolsConstants, BenchmarkTypes
 from BenchmarkTools.core.exceptions import AlreadyFinishedException
+from BenchmarkTools.core.multi_objective_experiment import MultiObjectiveExperiment
 from BenchmarkTools.core.run_tracking import wrapper_track_run_stats
 from BenchmarkTools.utils.loader_tools import load_object
 
