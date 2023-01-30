@@ -9,7 +9,10 @@ from oslo_concurrency import lockutils
 import json
 
 
-class BookKeeper:
+class BookKeeper(abc.ABC):
+    """
+    AbstractClass: This class takes care of managing the optimization limits.
+    """
     def __init__(self, benchmark_settings, lock_dir: Path, **kwargs):
         self.benchmark_settings = benchmark_settings
         self.lock_dir = Path(lock_dir)
@@ -145,6 +148,10 @@ class BookKeeper:
         return num_tae_calls
 
     def log_currently_used_resources(self):
+        """
+        Logging function: Write the currently used resources to the logger.
+        TODO: Add callbacks to the class and execute the callbacks here.
+        """
         used_resources = self.get_used_resources()
         remaining_time = self.wallclock_limit_in_s - used_resources['sum_wallclock_time']
         logger.info(f'WallClockTime left: {remaining_time:10.4f}s ({remaining_time / 3600:.4f}h)')
@@ -159,10 +166,17 @@ class BookKeeper:
 
 class MemoryBookkeeper(BookKeeper):
 
-    def __init__(self, benchmark_settings: Dict, limits_file: Path, lock_dir: Path):
-        super(MemoryBookkeeper, self).__init__(benchmark_settings=benchmark_settings, lock_dir=lock_dir)
+    def __init__(self, benchmark_settings: Dict,lock_dir: Path):
+        """
+        This bookkeeper lives in the memory.
 
-        self.resources_file = limits_file
+        Args:
+            benchmark_settings: Dict
+            lock_dir: Path
+                Directory to store the file lock
+        """
+
+        super(MemoryBookkeeper, self).__init__(benchmark_settings=benchmark_settings, lock_dir=lock_dir)
 
         # Store the limit information in this class.
         self.initial_time = time()
@@ -198,6 +212,14 @@ class MemoryBookkeeper(BookKeeper):
 class FileBookKeeper(BookKeeper):
 
     def __init__(self, benchmark_settings: Dict, lock_dir: Path, resource_file_dir: Path):
+        """
+        This object stores the optimization limits per run in a json - file.
+
+        Args:
+            benchmark_settings:
+            lock_dir:
+            resource_file_dir:
+        """
         super(FileBookKeeper, self).__init__(benchmark_settings=benchmark_settings, lock_dir=lock_dir)
 
         self.resource_file_dir = Path(resource_file_dir)

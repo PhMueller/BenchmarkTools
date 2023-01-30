@@ -12,7 +12,7 @@ def load_object(import_name: str, import_from: str, **kwargs: Dict) -> Any:
     """
     This helper function loads dynamically a class or function.
 
-    It executes the following statement:
+    It programmatically executes the following statement:
     > from `import_from` import `import_name`
 
     Args:
@@ -29,6 +29,16 @@ def load_object(import_name: str, import_from: str, **kwargs: Dict) -> Any:
 
 
 def load_benchmark_settings(benchmark_name: str) -> DictConfig:
+    """
+    Load a specific benchmark settings-file.
+
+    Args:
+        benchmark_name: str
+            name of the file in hydra_settings/benchmarks
+
+    Returns:
+        DictConfig
+    """
     config_path = Path(__file__).parent.resolve().absolute().parent / 'hydra_settings'
     with initialize_config_dir(config_dir=str(config_path / 'benchmarks'), job_name='benchmark', version_base=None):
         benchmark_settings = compose(config_name=benchmark_name, overrides=[])
@@ -36,6 +46,16 @@ def load_benchmark_settings(benchmark_name: str) -> DictConfig:
 
 
 def load_optimizer_settings(optimizer_name: str) -> DictConfig:
+    """
+    Load a specific optimizer settings-file.
+
+    Args:
+        optimizer_name: str
+            name of the file in hydra_settings/optimizers
+
+    Returns:
+        DictConfig
+    """
     config_path = Path(__file__).parent.resolve().absolute().parent / 'hydra_settings'
     with initialize_config_dir(config_dir=str(config_path / 'optimizers'), job_name='optimizers', version_base=None):
         optimizer_settings = compose(config_name=optimizer_name, overrides=[])
@@ -45,6 +65,7 @@ def load_optimizer_settings(optimizer_name: str) -> DictConfig:
 def load_benchmark_and_optimizer_conf(benchmark_name: str, optimizer_name: str) -> Tuple[DictConfig, DictConfig]:
     """
     Use the hydra interface to load the benchmark and optimizer settings that are defined in the settings directory.
+
     Args:
         benchmark_name: str
         optimizer_name: str

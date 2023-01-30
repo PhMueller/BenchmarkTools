@@ -2,25 +2,48 @@ from typing import Union, Dict, List
 
 import ConfigSpace as CS
 import numpy as np
-from botorch.test_functions.multi_objective import MultiObjectiveTestProblem
+from hpobench.abstract_benchmark import AbstractMultiObjectiveBenchmark
 from hpobench.config import config_file
-from hpobench.abstract_benchmark import AbstractSingleObjectiveBenchmark, AbstractMultiObjectiveBenchmark
 from hpobench.container.client_abstract_benchmark import AbstractBenchmarkClient, AbstractMOBenchmarkClient
-from torch import Tensor
 
 from BenchmarkTools.utils.loader_tools import load_object
 
-# from MOHPOBenchExperimentUtils.core.multiobjective_experiment_new import MultiObjectiveSimpleExperiment
-# from MOHPOBenchExperimentUtils.core.target_normalization import TargetScaler, get_scaler
-# from MOHPOBenchExperimentUtils.utils.ax_utils import get_ax_metrics_from_metric_dict
-# from MOHPOBenchExperimentUtils.utils.hpobench_utils import load_benchmark, HPOBenchMetrics
-# from MOHPOBenchExperimentUtils.utils.search_space_utils import convert_config_space_to_ax_space, \
-#     wrapper_change_hp_in_configspace
-
 
 class HPOBenchContainerInterface(AbstractMultiObjectiveBenchmark):
-    def __init__(self, settings: Dict, rng: int, socket_id=None, keep_alive=True, **kwargs):
-        self.settings = settings
+    """
+    This is a wrapper around an HPOBench Container.
+    The idea is to first create a benchmark object that lives in the main process.
+    This interface here stores then the socket_id / address to the container. When the interface is queried, it
+    establishes a connection to the benchmark.
+
+    That allows us later to easily pass the container to optimizers even though it requires to serialize this particular
+    interface/class to send it via pickle to a different process.
+
+    Also, the benchmark has only to be initialized once in the beginning.
+    """
+    def __init__(self, benchmark_settings: Dict, rng: int, socket_id=None, keep_alive=True, **kwargs):
+        """
+
+        Args:
+            benchmark_settings:  Dict
+
+            rng: int
+                seeding for the benchmark
+
+            socket_id: str, None
+                address of the benchmark.
+                * If you call this function with `keep_alive=True`, then socket_id has to be `None`
+                * otherwise, pass the `socket_id` from the always-running-container.
+
+            keep_alive: bool
+                flag indicting if the container should be kept alive.
+
+            **kwargs:
+        """
+        assert not keep_alive and socket_id is None, \
+            'You have to provide a socket id, if you only want connect to the benchmark.'
+
+        self.benchmark_settings = benchmark_settings
         self.socket_id = socket_id
         self.rng = rng
         self.benchmark = None
@@ -29,11 +52,11 @@ class HPOBenchContainerInterface(AbstractMultiObjectiveBenchmark):
 
     def init_benchmark(self) -> None:
         if self.benchmark is None:
-            benchmark_object = load_object(**self.settings['benchmark_import'])
+            benchmark_object = load_object(**self.benchmark_settings['benchmark_import'])
             self.benchmark: Union[AbstractMOBenchmarkClient, AbstractBenchmarkClient] = benchmark_object(
                 container_source=config_file.container_source,
                 rng=self.rng,
-                **self.settings.get('benchmark_parameters', {}),
+                **self.benchmark_settings.get('benchmark_parameters', {}),
                 socket_id=self.socket_id,
             )
             self.socket_id = self.benchmark.socket_id
@@ -62,7 +85,7 @@ class HPOBenchContainerInterface(AbstractMultiObjectiveBenchmark):
         if not self.keep_alive:
             self.benchmark = None
         return results
-    
+
     def objective_function_test(self, configuration: Union[CS.Configuration, Dict],
                                 fidelity: Union[Dict, CS.Configuration, None] = None,
                                 rng: Union[np.random.RandomState, int, None] = None,

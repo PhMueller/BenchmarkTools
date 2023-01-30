@@ -21,6 +21,20 @@ class MultiObjectiveExperiment:
             output_path: Path,
             run_id: int = 0,
     ):
+
+        """
+        This object contains all necessary information to run an experiment.
+        It combines tracking limits, calling the benchmark, and executing the optimizer.
+
+        Args:
+            optimizer: obj
+            optimizer_settings: Dict
+            benchmark: obj
+            benchmark_settings: Dict
+            output_path: Path
+            run_id: int
+        """
+
         self.output_path = Path(output_path)
         self.optimizer = optimizer
         self.optimizer_settings = optimizer_settings

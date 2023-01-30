@@ -43,11 +43,11 @@ def run(benchmark_name: str,
 
     elif BenchmarkTypes[benchmark_settings['benchmark_type']] is BenchmarkTypes.HPOBENCH_CONTAINER:
         main_benchmark = HPOBenchContainerInterface(
-            settings=benchmark_settings, rng=run_id, keep_alive=True
+            benchmark_settings=benchmark_settings, rng=run_id, keep_alive=True
         )
         main_benchmark.init_benchmark()
         benchmark: HPOBenchContainerInterface = HPOBenchContainerInterface(
-            settings=benchmark_settings, rng=run_id,
+            benchmark_settings=benchmark_settings, rng=run_id,
             socket_id=main_benchmark.socket_id, keep_alive=False
         )
     else:
