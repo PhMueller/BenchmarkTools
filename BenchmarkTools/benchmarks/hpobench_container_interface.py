@@ -40,7 +40,7 @@ class HPOBenchContainerInterface(AbstractMultiObjectiveBenchmark):
 
             **kwargs:
         """
-        assert not keep_alive and socket_id is None, \
+        assert not (not keep_alive and socket_id is None), \
             'You have to provide a socket id, if you only want connect to the benchmark.'
 
         self.benchmark_settings = benchmark_settings

@@ -31,14 +31,22 @@ def color_to_rgba_str(color: str, opacity: float = 1.0):
     return rgba_color_str
 
 
-def make_marker(
+def make_marker_style_dict(
     plotting_settings: DictConfig,
     opacity: float = 1.0,
-
 ) -> Dict[str, Any]:
 
     return {
         "opacity": opacity,
         "line": {"width": 0.5, "color": 'DarkSlateGrey'},
         "color": color_to_rgba_str(plotting_settings.color, opacity=opacity),
+    }
+
+
+def make_linestyle_dict(
+    plotting_settings: DictConfig,
+):
+    return {
+        'dash': plotting_settings.linestyle,
+        'width': 1,
     }

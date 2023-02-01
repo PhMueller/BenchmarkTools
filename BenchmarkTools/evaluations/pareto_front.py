@@ -13,12 +13,13 @@ from BenchmarkTools.evaluations.data_container import (
     load_data_containers_from_directory,
     DataContainer,
 )
-from BenchmarkTools.evaluations.plotting_utils import make_marker
+from BenchmarkTools.evaluations.plotting_utils import make_marker_style_dict
 from BenchmarkTools.utils.loader_tools import load_optimizer_settings
 
 
 def plot_pareto_front_one_experiment(data_containers: List[DataContainer], output_dir: Path, benchmark_name: str):
 
+    output_dir.mkdir(exist_ok=True, parents=True)
     plot_file = output_dir / f'pareto_front_{benchmark_name}.html'
 
     fig = Figure(layout=go.Layout(width=1000, height=800))
@@ -26,8 +27,8 @@ def plot_pareto_front_one_experiment(data_containers: List[DataContainer], outpu
     for data_container in data_containers_combined:
         plotting_settings = load_optimizer_settings(data_container.optimizer).plotting
 
-        non_dominated_marker = make_marker(plotting_settings=plotting_settings, opacity=1.0)
-        dominated_marker = make_marker(plotting_settings=plotting_settings, opacity=0.3)
+        non_dominated_marker = make_marker_style_dict(plotting_settings=plotting_settings, opacity=1.0)
+        dominated_marker = make_marker_style_dict(plotting_settings=plotting_settings, opacity=0.3)
 
         pf_infos = _get_pareto_front_info(
             study=data_container.study,

@@ -2,30 +2,31 @@ defaults:
   - _default_benchmark_parameters
   - _self_
 
-name: BraninCurrin
+name: DH1
 
 objectives:
-  - name: branin
+  - name: objective_1
     limits: [0, 350]
     lower_is_better: True
-  - name: currin
+  - name: objective_2
     limits: [0, 12]
     lower_is_better: True
 
 track_metrics: []
 
-benchmark_type: BotorchToyBenchmark
+benchmark_type: BOTORCH_BLACK_BOX
 benchmark_import:
-  import_from: benchmarks.toy_benchmark
-  import_name: BOTestFunctionBenchmark
+  import_from: BenchmarkTools.benchmarks.botorch_black_box_interface
+  import_name: BotorchBlackBoxBenchmark
 
 benchmark_parameters:
-  function_name: BraninCurrin
+  function_name: DH1
   function_kwargs:
     negate: false
+    dim: 4
 
 optimization_parameters:
-  tae_limit: 100
+  tae_limit: 250
   wallclock_limit_in_s: 1800
   estimated_cost_limit_in_s: 1800
   is_surrogate: True

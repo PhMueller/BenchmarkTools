@@ -1,0 +1,33 @@
+defaults:
+  - _default_benchmark_parameters
+  - _self_
+
+name: ZDT1_4
+
+objectives:
+  - name: objective_1
+    limits: [0, 1]
+    lower_is_better: True
+  - name: objective_2
+    limits: [0, 2]
+    lower_is_better: True
+
+track_metrics: []
+
+benchmark_type: BOTORCH_BLACK_BOX
+benchmark_import:
+  import_from: BenchmarkTools.benchmarks.botorch_black_box_interface
+  import_name: BotorchBlackBoxBenchmark
+
+benchmark_parameters:
+  function_name: ZDT1
+  function_kwargs:
+    dim: 4
+    negate: false
+    noise_std: 0.0  # TODO: not provided in the paper, but maybe still > 0
+
+optimization_parameters:
+  tae_limit: 250
+  wallclock_limit_in_s: 1800
+  estimated_cost_limit_in_s: 1800
+  is_surrogate: True

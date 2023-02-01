@@ -2,7 +2,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 from pprint import pformat
-from typing import List
+from typing import List, Dict
 
 import pandas as pd
 from oslo_concurrency import lockutils
@@ -39,7 +39,7 @@ def wrapper_track_run_stats(func_to_wrap):
 
         @lockutils.synchronized('not_thread_process_safe', external=True, lock_path=str(lock_dir), delay=0.001)
         def update_state_file(entry: Dict, state_file: Path, col_names: List[str], check_duplicates_on: List[str]):
-            """Helperfunction: Write the tracking stats to a csv file. """
+            """Helper function: Write the tracking stats to a csv file. """
             new_df = pd.DataFrame([entry])
 
             # When a run has finished check if it was broken before and remove that broken one from the run stats
@@ -68,8 +68,9 @@ def wrapper_track_run_stats(func_to_wrap):
             if not isinstance(e, AlreadyFinishedException):
                 crash = True
 
-        col_names = ['time_str', 'wallclock_time_in_s', 'result_dir', 'benchmark', 'optimizer', 'run_id', 'status', 'run_dir', 'exception']
         check_duplicates_on = [                         'result_dir', 'benchmark', 'optimizer', 'run_id']
+        col_names = ['time_str', 'wallclock_time_in_s', 'result_dir', 'benchmark', 'optimizer', 'run_id',
+                     'status', 'run_dir', 'exception']
 
         entry = {
             'time_str': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-4],

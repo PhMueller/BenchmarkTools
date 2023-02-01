@@ -7,21 +7,22 @@ import plotly.graph_objects as go
 from plotly.graph_objects import Figure
 
 from BenchmarkTools import logger
-from BenchmarkTools.evaluations.data_container import (
-    load_data_containers_from_directory,
-    DataContainer,
-)
-from BenchmarkTools.evaluations.plotting_utils import color_to_rgba_str, make_marker
+from BenchmarkTools.evaluations.data_container import load_data_containers_from_directory, DataContainer
+from BenchmarkTools.evaluations.plotting_utils import color_to_rgba_str, make_marker_style_dict, make_linestyle_dict
 from BenchmarkTools.utils.loader_tools import load_optimizer_settings
 
 
 def plot_trajectories_per_objective(
-        data_containers_by_optimizer: Dict[str, DataContainer],
+        data_containers_by_optimizer: Dict[str, List[DataContainer]],
         output_dir: Path,
         benchmark_name: str
 ):
+
+    output_dir.mkdir(exist_ok=True, parents=True)
+
     n_objectives = None
     figures = None
+    objective_names = None
     # TODO: Rename that feature and make it a parameter to the function!
     x_axis = 'number'  # Time
 
@@ -29,7 +30,8 @@ def plot_trajectories_per_objective(
     for i_optimizer, optimizer in enumerate(data_containers_by_optimizer.keys()):
         plotting_settings = None
         directions = None
-        objective_names = None
+
+        objective_columns = None
         color_rgba = None
         color_rgba_transparent = None
 
@@ -50,8 +52,10 @@ def plot_trajectories_per_objective(
             trials_df = data_container.study.trials_dataframe()
             trials_df = trials_df[trials_df.state == 'COMPLETE']
 
+            if objective_columns is None:
+                objective_columns = [col for col in trials_df.columns if col.startswith('values_')]
+
             # TODO: Add surrogate cost column if it is a surrogate benchmark!
-            objective_columns = [col for col in trials_df.columns if col.startswith('values_')]
             select_cols = ['number', 'datetime_complete'] + objective_columns
             trials_df = trials_df.loc[:, select_cols]
             trials_df.loc[:, 'run_id'] = data_container.run_id
@@ -96,8 +100,8 @@ def plot_trajectories_per_objective(
                     x=sub_pivot.index,
                     y=mean,
                     mode='lines',
-                    line={'dash': plotting_settings.linestyle},
-                    marker=make_marker(plotting_settings=plotting_settings, opacity=1.0),
+                    line=make_linestyle_dict(plotting_settings),
+                    marker=make_marker_style_dict(plotting_settings=plotting_settings, opacity=1.0),
                     showlegend=True,
                     name=plotting_settings.display_name
                 ),
@@ -110,12 +114,8 @@ def plot_trajectories_per_objective(
                     x=sub_pivot.index,
                     y=mean + std,
                     mode='lines',
-                    marker={
-                        "line": {"width": 0.5, "color": 'DarkSlateGrey', },
-                        "color": color_rgba,
-                        'opacity': 0.1
-                    },
-                    line={'dash': plotting_settings.linestyle, 'width': 1},
+                    marker=make_marker_style_dict(plotting_settings=plotting_settings, opacity=0.1),
+                    line=make_linestyle_dict(plotting_settings),
                     showlegend=False
                     ),
             )
@@ -124,12 +124,8 @@ def plot_trajectories_per_objective(
                     name='Lower Bound',
                     x=sub_pivot.index,
                     y=mean - std,
-                    marker={
-                        "line": {"width": 0.5, "color": 'DarkSlateGrey', },
-                        "color": color_rgba,
-                        'opacity': 0.1
-                    },
-                    line={'dash': plotting_settings.linestyle, 'width': 1},
+                    marker=make_marker_style_dict(plotting_settings=plotting_settings, opacity=0.1),
+                    line=make_linestyle_dict(plotting_settings),
                     mode='lines',
                     fillcolor=color_rgba_transparent,
                     fill='tonexty',
@@ -144,7 +140,7 @@ def plot_trajectories_per_objective(
                     y=mean.iloc[last_valid_ids],
                     mode='markers',
                     showlegend=False,
-                    marker=make_marker(plotting_settings, opacity=1.0),
+                    marker=make_marker_style_dict(plotting_settings, opacity=1.0),
                 ),
             )
 

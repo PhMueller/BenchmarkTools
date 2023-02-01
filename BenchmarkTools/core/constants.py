@@ -16,6 +16,8 @@ class BenchmarkToolsTrackMetrics(_BaseEnum):
     """
     Collection of all logging and metric tracking related names
     """
+    FUNCTION_VALUE_FIELD = 'function_value'
+    INFO_FIELD = 'info'
     COST = 'cost'
     WALLCLOCK_CONFIG_START = 'EXP_WALLCLOCK_CONFIG_START'
     WALLCLOCK_CONFIG_END = 'EXP_WALLCLOCK_CONFIG_END'
@@ -37,4 +39,4 @@ class BenchmarkTypes(_BaseEnum):
     """
     HPOBENCH_CONTAINER = 'HPOBENCH_CONTAINER'
     HPOBENCH_LOCAL = 'HPOBENCH_LOCAL'
-    BOTORCH_TOY = 'BOTORCH_TOY'
+    BOTORCH_BLACK_BOX = 'BOTORCH_BLACK_BOX'

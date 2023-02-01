@@ -5,7 +5,7 @@ from omegaconf import DictConfig
 
 from BenchmarkTools import logger
 from BenchmarkTools.benchmarks.hpobench_container_interface import HPOBenchContainerInterface
-from BenchmarkTools.benchmarks.toy_benchmark import BOTestFunctionBenchmark
+from BenchmarkTools.benchmarks.botorch_black_box_interface import BotorchBlackBoxBenchmark
 from BenchmarkTools.core.constants import BenchmarkToolsConstants, BenchmarkTypes
 from BenchmarkTools.core.exceptions import AlreadyFinishedException
 from BenchmarkTools.core.multi_objective_experiment import MultiObjectiveExperiment
@@ -36,10 +36,10 @@ def run(benchmark_name: str,
     assert benchmark_settings['benchmark_type'] in [t.name for t in BenchmarkTypes], \
         f'BenchmarkType has to be in {[t.name for t in BenchmarkTypes]} but was {benchmark_settings["benchmark_type"]}'
 
-    if BenchmarkTypes[benchmark_settings['benchmark_type']] is BenchmarkTypes.BOTORCH_TOY:
+    if BenchmarkTypes[benchmark_settings['benchmark_type']] is BenchmarkTypes.BOTORCH_BLACK_BOX:
         benchmark_object = load_object(**benchmark_settings['benchmark_import'])
-        benchmark: BOTestFunctionBenchmark = benchmark_object(
-            **benchmark_settings['benchmark_parameters']
+        benchmark: BotorchBlackBoxBenchmark = benchmark_object(
+            benchmark_settings=benchmark_settings,
         )
 
     elif BenchmarkTypes[benchmark_settings['benchmark_type']] is BenchmarkTypes.HPOBENCH_CONTAINER:

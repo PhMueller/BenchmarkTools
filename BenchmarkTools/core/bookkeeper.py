@@ -194,11 +194,11 @@ class MemoryBookkeeper(BookKeeper):
             sum_wallclock_time: Optional[float] = None,
             sum_total_costs: Optional[float] = None
     ):
-        self.initial_time = initial_time or self.initial_time
-        self.num_tae_calls = num_tae_calls or self.num_tae_calls
-        self.sum_surrogate_cost = sum_surrogate_cost or self.sum_surrogate_cost
-        self.sum_wallclock_time = sum_wallclock_time or self.sum_wallclock_time
-        self.sum_total_costs = sum_total_costs or self.sum_total_costs
+        self.initial_time = initial_time if initial_time is not None else self.initial_time
+        self.num_tae_calls = num_tae_calls if num_tae_calls is not None else self.num_tae_calls
+        self.sum_surrogate_cost = sum_surrogate_cost if sum_surrogate_cost is not None else self.sum_surrogate_cost
+        self.sum_wallclock_time = sum_wallclock_time if sum_wallclock_time is not None else self.sum_wallclock_time
+        self.sum_total_costs = sum_total_costs if sum_total_costs is not None else self.sum_total_costs
 
     def _get_used_resources(self) -> Dict:
         return {

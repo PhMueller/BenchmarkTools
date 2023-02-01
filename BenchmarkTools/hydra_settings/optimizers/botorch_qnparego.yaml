@@ -1,0 +1,19 @@
+defaults:
+  - _default_optimizer_settings
+  - _self_
+
+name: botorch_qnparego
+
+optimizer_import:
+  import_from: BenchmarkToolsOptimizers.optimizers.bayesian_optimization.botorch
+  import_name: QNParEgo
+
+optimizer_parameters:
+  initial_samples: 20
+  batch_size: 1
+
+
+plotting:
+  display_name: $QNPAREGO_{1}$
+  color: "#377eb8"
+  linestyle: dash

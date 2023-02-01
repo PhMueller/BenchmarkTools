@@ -1,0 +1,32 @@
+defaults:
+  - _default_benchmark_parameters
+  - _self_
+
+name: BraninCurrin
+
+objectives:
+  - name: branin
+    limits: [0, 350]
+    lower_is_better: True
+  - name: currin
+    limits: [0, 12]
+    lower_is_better: True
+
+track_metrics: []
+
+benchmark_type: BOTORCH_BLACK_BOX
+benchmark_import:
+  import_from: BenchmarkTools.benchmarks.botorch_black_box_interface
+  import_name: BotorchBlackBoxBenchmark
+
+benchmark_parameters:
+  function_name: BraninCurrin
+  function_kwargs:
+    negate: false
+    noise_std: 0.05
+
+optimization_parameters:
+  tae_limit: 250
+  wallclock_limit_in_s: 1800
+  estimated_cost_limit_in_s: 1800
+  is_surrogate: True

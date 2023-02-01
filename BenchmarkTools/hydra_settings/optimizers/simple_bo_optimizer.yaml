@@ -5,5 +5,5 @@ defaults:
 name: simple_bo
 
 optimizer_import:
-  import_from: BenchmarkToolsOptimizers.optimizers.bayesian_optimizer.simple_gp
+  import_from: BenchmarkToolsOptimizers.optimizers.bayesian_optimization.simple_gp
   import_name: SimpleBOOptimizer

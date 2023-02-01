@@ -51,11 +51,16 @@ class MultiObjectiveExperiment:
         self.optuna_distributions_fs = self._configuration_space_cs_optuna_distributions(self.fidelity_space)
         self.optuna_distributions = {**self.optuna_distributions, **self.optuna_distributions_fs}
 
-        from BenchmarkTools.core.bookkeeper import FileBookKeeper
-        self.bookkeeper = FileBookKeeper(
-            benchmark_settings=self.benchmark_settings,
+        # from BenchmarkTools.core.bookkeeper import FileBookKeeper
+        # self.bookkeeper = FileBookKeeper(
+        #     benchmark_settings=self.benchmark_settings,
+        #     lock_dir=self.output_path / 'lock_dir',
+        #     resource_file_dir=self.output_path
+        # )
+        from BenchmarkTools.core.bookkeeper import MemoryBookkeeper
+        self.bookkeeper = MemoryBookkeeper(
+            benchmark_settings=benchmark_settings,
             lock_dir=self.output_path / 'lock_dir',
-            resource_file_dir=self.output_path
         )
 
         self.study: [optuna.Study, None] = None
@@ -184,7 +189,7 @@ class MultiObjectiveExperiment:
         # TODO: Set additional information!
         additional_info = result_dict['info']
         additional_info.update(**{'cost': result_dict['cost']})
-        for k, v in additional_info.values:
+        for k, v in additional_info.items():
             trial.set_user_attr(f'info_{k}', v)
 
         trial.state = optuna.trial.TrialState.COMPLETE

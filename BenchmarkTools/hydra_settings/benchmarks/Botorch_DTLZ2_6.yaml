@@ -1,0 +1,33 @@
+defaults:
+  - _default_benchmark_parameters
+  - _self_
+
+name: DTLZ2_6
+
+objectives:
+  - name: objective_1
+    limits: [0, 2]
+    lower_is_better: True
+  - name: objective_2
+    limits: [0, 2]
+    lower_is_better: True
+
+track_metrics: []
+
+benchmark_type: BOTORCH_BLACK_BOX
+benchmark_import:
+  import_from: BenchmarkTools.benchmarks.botorch_black_box_interface
+  import_name: BotorchBlackBoxBenchmark
+
+benchmark_parameters:
+  function_name: DTLZ2
+  function_kwargs:
+    dim: 6
+    negate: false
+    noise_std: 0.1
+
+optimization_parameters:
+  tae_limit: 250
+  wallclock_limit_in_s: 1800
+  estimated_cost_limit_in_s: 1800
+  is_surrogate: True

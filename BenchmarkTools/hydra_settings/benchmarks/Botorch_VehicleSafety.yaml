@@ -1,0 +1,34 @@
+defaults:
+  - _default_benchmark_parameters
+  - _self_
+
+name: VehicleSafety
+
+objectives:
+  - name: mass  # proxy for fuel efficiency
+    limits: [1660, 1705]
+    lower_is_better: True
+  - name: acceleration  # proxy for passenger trauma in a full frontal collision
+    limits: [6, 12]
+    lower_is_better: True
+  - name: vehicle_fragility
+    limits: [0.047, 0.26]
+    lower_is_better: True
+
+track_metrics: []
+
+benchmark_type: BOTORCH_BLACK_BOX
+benchmark_import:
+  import_from: BenchmarkTools.benchmarks.botorch_black_box_interface
+  import_name: BotorchBlackBoxBenchmark
+
+benchmark_parameters:
+  function_name: VehicleSafety
+  function_kwargs:
+  objective_noise: 0.01
+
+optimization_parameters:
+  tae_limit: 250
+  wallclock_limit_in_s: 1800
+  estimated_cost_limit_in_s: 1800
+  is_surrogate: True
