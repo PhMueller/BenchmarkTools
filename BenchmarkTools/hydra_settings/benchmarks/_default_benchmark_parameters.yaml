@@ -1,10 +1,12 @@
+# Benchmark Name
 name: ???
 
+# List of objectives to use for optimization
 objectives: ???
 
+# List of metrics to track for later analysis
 track_metrics:
   -
-
 
 # Define the correct benchmark file to load.
 # Can be one of: HPOBENCH_CONTAINER HPOBENCH_LOCAL BOTORCH_BLACK_BOX.
@@ -15,8 +17,10 @@ benchmark_import:
   import_from: ???
   import_name: ???
 
+# These parameters initialize the benchmark
 benchmark_parameters:
 
+# Define the optimization budgets
 optimization_parameters:
   tae_limit: ???
   wallclock_limit_in_s: ???

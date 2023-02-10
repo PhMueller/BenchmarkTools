@@ -1,11 +1,15 @@
+# Optimizer name
 name: ???
 
+# How to load the optimizer
 optimizer_import:
   import_from: ???
   import_name: ???
 
+# Parameters to initialize the optimizer
 optimizer_parameters: ???
 
+# Define some constant for automated plotting
 plotting:
   name: ???
   color: ???
