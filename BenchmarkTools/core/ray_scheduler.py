@@ -73,6 +73,10 @@ class Scheduler(object):
         with self.running_jobs_lock:
             return len(self.running_jobs)
 
+    def get_num_free_workers(self) -> int:
+        with self.free_worker_lock:
+            return len(self.free_workers_queue)
+
     def get_finished_jobs(self) -> List[Job]:
         with self.finished_jobs_queue_lock:
             finished_jobs = self.finished_jobs.copy()
@@ -86,16 +90,9 @@ class Scheduler(object):
         self.submit_thread.start()
         self.fetch_thread.start()
 
-    def stop_background_threads(self):
-        """ Stop the background processes of submitting and fetching. """
-        self.submit_is_running = False
-        self.fetch_is_running = False
-        self.submit_thread.join()
-        self.fetch_thread.join()
-
     def loop_submit_job(self):
         # If there are free workers: submit a new job
-        logger.info(f'Free Workers: {len(self.free_workers_queue):2d} - Jobs to assign: {len(self.job_queue):3d}')
+        logger.info('Start submit-loop')
 
         while self.submit_is_running:
             if len(self.free_workers_queue) != 0 and len(self.job_queue) != 0:
@@ -110,14 +107,20 @@ class Scheduler(object):
                     free_worker = self.workers_dict[free_worker_id]
                     job_ref = free_worker._process_job.remote(job)  # reference to future result object.
 
+                logger.debug(f'Assign job {job_ref.hex()[:6]} to worker {free_worker_id[:6]}')
+
                 with self.running_jobs_lock:
                     self.running_jobs.append(job_ref)
 
             else:
                 sleep(0.0001)
+        logger.info('End submit-loop')
+
 
     def loop_fetch_results(self):
         """ This is the function for fetching results and add them to a result queue. """
+        logger.info('Start result-fetching-loop')
+
         while self.fetch_is_running:
             if len(self.running_jobs) != 0:
 
@@ -131,19 +134,31 @@ class Scheduler(object):
 
                 # Look for the worker id that has executed the job
                 worker_id = job_ref.task_id().actor_id().hex()
-                logger.info(f'Fetch Result: Worker {worker_id} - Result {finished_job.result_dict}')
+                logger.debug(f'Get job {job_ref.hex()[:6]} from {worker_id[:6]}')
+                logger.debug(f'Received result {finished_job.result_dict}')
 
                 with self.finished_jobs_queue_lock:
                     self.finished_jobs.append(finished_job)
 
                 with self.free_worker_lock:
+                    logger.debug(f'Add worker {worker_id[:6]} to free worker queue')
                     self.free_workers_queue.append(worker_id)
 
                 with self.running_jobs_lock:
                     # Better: Remove the finished job from the running jobs - queue
                     self.running_jobs = [j for j in self.running_jobs if j.hex() != job_ref.hex()]
+        logger.info('End result-fetching-loop')
+
+    def stop_background_threads(self):
+        """ Stop the background processes of submitting and fetching. """
+        logger.info('Stop background threads')
+        self.submit_is_running = False
+        self.fetch_is_running = False
+        self.submit_thread.join()
+        self.fetch_thread.join()
 
     def stop_workers(self):
+        logger.info('Call stop function of workers')
         for worker in self.workers_dict.values():
             try:
                 ray.get(worker.stop.remote())

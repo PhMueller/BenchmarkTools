@@ -14,6 +14,9 @@ class Worker(object):
     def compute(self, configuration: Dict, fideltiy: Dict) -> Dict:
         raise NotImplementedError()
 
+    def is_alive(self):
+        return True
+
     def stop(self):
         """ You can add clean up functionality to stop the worker here! """
         pass
@@ -21,12 +24,12 @@ class Worker(object):
     def _process_job(self, job: Job):
 
         job.start_job()
-        logger.info(f'Worker {self.worker_id}: Obj Func: Start - config {job.configuration}')
+        logger.debug(f'Worker {self.worker_id}: Obj Func: Start - config {job.configuration}')
 
         result_dict = self.compute(job.configuration, job.fidelity)
         job.register_result(result_dict=result_dict)
 
-        logger.info(f'Worker {self.worker_id}: Obj Func: return {result_dict}')
+        logger.debug(f'Worker {self.worker_id}: Obj Func: return {result_dict}')
         return job
 
 
