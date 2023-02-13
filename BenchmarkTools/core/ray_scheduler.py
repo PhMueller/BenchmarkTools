@@ -1,6 +1,7 @@
 from threading import Thread, Lock
 from time import sleep
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Deque
+from collections import deque
 
 import ray
 
@@ -14,21 +15,21 @@ class Scheduler(object):
     def __init__(self, workers: List):
 
         # Collection of workers that process a given configuration.
-        self.workers: Dict[str, Worker] = {}
+        self.workers_dict: Dict[str, Worker] = {}
         for worker in workers:
             self.add_worker(worker)
 
         # Store the names of idle workers
-        self.free_workers: List[str] = list(self.workers.keys())
+        self.free_workers_queue: Deque[str] = deque(self.workers_dict.keys())
 
         # This queue does contain all jobs that are not scheduled yet
-        self.job_queue: List[Job] = []
+        self.job_queue: Deque[Job] = deque()
 
         # This queue stores the references to the currently running jobs
         self.running_jobs: List[str] = []
 
         # this queue stores the returned results from the workers
-        self.finished_jobs_queue: List[Job] = []
+        self.finished_jobs: List[Job] = []
 
         # Submitting and Fetching is organized in threads. Thus, we need some flags to be able to cancel these processes
         # as well as some locks to make it concurrently working
@@ -45,14 +46,14 @@ class Scheduler(object):
     def add_worker(self, worker: Worker):
         """ Add a new worker to the scheduler. """
         worker_name = worker._actor_id.hex()
-        if worker_name in self.workers:
+        if worker_name in self.workers_dict:
             logger.info(f'Worker {worker_name} already in mapping. Skip.')
             return
 
-        self.workers[worker_name] = worker
+        self.workers_dict[worker_name] = worker
         logger.info(f'Worker {worker_name} added to scheduler.')
 
-    def add_jobs(self, jobs: Union[List[Job], Job]):
+    def add_jobs(self, jobs: Union[List[Job], Deque[Job], Job]):
 
         if isinstance(jobs, Job):
             jobs = [jobs]
@@ -62,7 +63,7 @@ class Scheduler(object):
 
     def get_num_finished_jobs(self) -> int:
         with self.finished_jobs_queue_lock:
-            return len(self.finished_jobs_queue)
+            return len(self.finished_jobs)
 
     def get_num_pending_jobs(self) -> int:
         with self.job_queue_lock:
@@ -74,9 +75,9 @@ class Scheduler(object):
 
     def get_finished_jobs(self) -> List[Job]:
         with self.finished_jobs_queue_lock:
-            results = self.finished_jobs_queue.copy()
-            self.finished_jobs_queue = []
-            return results
+            finished_jobs = self.finished_jobs.copy()
+            self.finished_jobs = []
+            return finished_jobs
 
     def run(self):
         """ Start submitting and fetching potential jobs in the background. """
@@ -94,20 +95,20 @@ class Scheduler(object):
 
     def loop_submit_job(self):
         # If there are free workers: submit a new job
-        logger.info(f'Free Workers: {len(self.free_workers):2d} - Jobs to assign: {len(self.job_queue):3d}')
+        logger.info(f'Free Workers: {len(self.free_workers_queue):2d} - Jobs to assign: {len(self.job_queue):3d}')
 
         while self.submit_is_running:
-            if len(self.free_workers) != 0 and len(self.job_queue) != 0:
-                logger.info(f'Free Workers: {len(self.free_workers):2d} - Jobs to assign: {len(self.job_queue):3d}')
+            if len(self.free_workers_queue) != 0 and len(self.job_queue) != 0:
+                logger.info(f'Free Workers: {len(self.free_workers_queue):2d} - Jobs to assign: {len(self.job_queue):3d}')
 
                 # Get a new configuration from the job queue and assign the job to a free worker
                 with self.job_queue_lock:
-                    job = self.job_queue.pop()
+                    job = self.job_queue.popleft()
 
                 with self.free_worker_lock:
-                    free_worker_id = self.free_workers.pop()
-                    free_worker = self.workers[free_worker_id]
-                    job_ref = free_worker._process_job.remote(job)
+                    free_worker_id = self.free_workers_queue.popleft()
+                    free_worker = self.workers_dict[free_worker_id]
+                    job_ref = free_worker._process_job.remote(job)  # reference to future result object.
 
                 with self.running_jobs_lock:
                     self.running_jobs.append(job_ref)
@@ -120,7 +121,7 @@ class Scheduler(object):
         while self.fetch_is_running:
             if len(self.running_jobs) != 0:
 
-                # Might break here otherwise: New job is added but we override here the remaining jobs!
+                # Might break here otherwise: New job is added, but we override here the remaining jobs!
                 with self.running_jobs_lock:
                     copy_running_jobs = self.running_jobs.copy()
 
@@ -133,17 +134,17 @@ class Scheduler(object):
                 logger.info(f'Fetch Result: Worker {worker_id} - Result {finished_job.result_dict}')
 
                 with self.finished_jobs_queue_lock:
-                    self.finished_jobs_queue.append(finished_job)
+                    self.finished_jobs.append(finished_job)
 
                 with self.free_worker_lock:
-                    self.free_workers.append(worker_id)
+                    self.free_workers_queue.append(worker_id)
 
                 with self.running_jobs_lock:
                     # Better: Remove the finished job from the running jobs - queue
                     self.running_jobs = [j for j in self.running_jobs if j.hex() != job_ref.hex()]
 
     def stop_workers(self):
-        for worker in self.workers.values():
+        for worker in self.workers_dict.values():
             try:
                 ray.get(worker.stop.remote())
                 ray.kill(worker)
