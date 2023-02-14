@@ -1,13 +1,15 @@
 from threading import Thread, Lock
-from time import sleep
+from time import sleep, time
 from typing import List, Dict, Union, Deque
 from collections import deque
 
 import ray
+from loguru import logger
 
 from BenchmarkTools import logger
 from BenchmarkTools.core.ray_job import Job
 from BenchmarkTools.core.ray_worker import Worker
+from playground.ray_actor import num_workers
 
 
 class Scheduler(object):
@@ -116,7 +118,6 @@ class Scheduler(object):
                 sleep(0.0001)
         logger.info('End submit-loop')
 
-
     def loop_fetch_results(self):
         """ This is the function for fetching results and add them to a result queue. """
         logger.info('Start result-fetching-loop')
@@ -128,7 +129,15 @@ class Scheduler(object):
                 with self.running_jobs_lock:
                     copy_running_jobs = self.running_jobs.copy()
 
+                # Either no or at max 1 finished job is returned here...
+                # wait_interval_in_s = 1
+                # job_ref, remaining_refs = ray.wait(copy_running_jobs, num_returns=1, timeout=wait_interval_in_s)
                 job_ref, remaining_refs = ray.wait(copy_running_jobs, num_returns=1, timeout=None)
+
+                # If no result is available, skip the remaining loop
+                # if len(job_ref) == 0:
+                #     continue
+
                 job_ref = job_ref[0]
                 finished_job: Job = ray.get(job_ref)
 
@@ -166,6 +175,46 @@ class Scheduler(object):
             except Exception as e:
                 pass
 
-    def __del__(self):
+    def shutdown(self):
         self.stop_background_threads()
         self.stop_workers()
+
+    def __del__(self):
+        self.shutdown()
+
+
+def is_ready_for_new_configuration(scheduler: Scheduler, show_log_msg: bool = False) -> bool:
+    num_pending_jobs = scheduler.get_num_pending_jobs()
+    num_running_jobs = scheduler.get_num_running_jobs()
+    num_free_workers = scheduler.get_num_free_workers()
+
+    if show_log_msg:
+        logger.info(f'Currently Free Workers: {num_free_workers:3d}')
+        logger.info(f'Currently Pending jobs: {num_pending_jobs:3d}')
+        logger.info(f'Currently Running jobs: {num_running_jobs:3d}')
+
+    # Check if some workers have not assigned work yet
+    free_workers_available_1 = num_free_workers > 0
+
+    # It might be the case that a worker is not assigned yet but there are enough pending jobs to be assigned soon
+    free_workers_available_2 = (num_running_jobs + num_pending_jobs) < num_workers
+
+    # We can schedule a new configuration if both conditions are fulfilled.
+    return free_workers_available_1 and free_workers_available_2
+
+
+def wait_until_ready_for_new_configs(scheduler: Scheduler, sleep_interval: float = 0.001, log_every_k_seconds: int = 5):
+    last_print = time()
+    show_log_msg = True
+
+    # If there are no free workers or no job to potentially schedule to an empty worker, wait.
+    while not is_ready_for_new_configuration(scheduler, show_log_msg=show_log_msg):
+
+        # Only print every `log_every_k_seconds`
+        if show_log_msg:
+            last_print = time()  # update
+            logger.info(f'No Free Worker Available. Sleep for {sleep_interval}s.')
+
+        sleep(sleep_interval)
+
+        show_log_msg = time() - last_print > log_every_k_seconds

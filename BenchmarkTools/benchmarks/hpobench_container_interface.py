@@ -79,7 +79,6 @@ class HPOBenchContainerInterface(AbstractMultiObjectiveBenchmark):
                            fidelity: Union[Dict, CS.Configuration, None] = None,
                            rng: Union[np.random.RandomState, int, None] = None,
                            **kwargs) -> Dict:
-
         self.init_benchmark()
         results = self.benchmark.objective_function(configuration=configuration, fidelity=fidelity, rng=rng, **kwargs)
         if not self.keep_alive:
@@ -106,3 +105,7 @@ class HPOBenchContainerInterface(AbstractMultiObjectiveBenchmark):
         if not self.keep_alive:
             self.benchmark = None
         return obj_names
+
+    def __del__(self):
+        if self.benchmark is not None:
+            self.benchmark.shutdown()

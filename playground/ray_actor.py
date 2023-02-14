@@ -6,52 +6,27 @@ Worker:
  - init: instantiate a benchmark function
  - get_objective_function(config) -> result
 """
+
+from time import time
+from typing import Dict
+
 import ConfigSpace as CS
 import numpy as np
-import ray
-from time import sleep, time
-from loguru import logger
-
-from BenchmarkTools.core.ray_job import Job
-from BenchmarkTools.core.ray_scheduler import Scheduler
-from BenchmarkTools.core.ray_worker import BenchmarkWorker
-from typing import Dict
 import pandas as pd
-import numpy as np
-from hebo.design_space.design_space import DesignSpace
-from hebo.optimizers.hebo import HEBO
-
-from hebo.design_space.design_space import DesignSpace
-from hebo.optimizers.hebo import HEBO
+import ray
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter, \
     NormalFloatHyperparameter, NormalIntegerHyperparameter, \
     Constant, CategoricalHyperparameter, OrdinalHyperparameter
 from ConfigSpace.util import deactivate_inactive_hyperparameters
+from hebo.design_space.design_space import DesignSpace
+from hebo.optimizers.hebo import HEBO
+from loguru import logger
+
+from BenchmarkTools.core.ray_job import Job
+from BenchmarkTools.core.ray_scheduler import Scheduler, wait_until_ready_for_new_configs
+from BenchmarkTools.core.ray_worker import BenchmarkWorker
 
 MAX_VALUE = 2**32 - 1
-
-
-def wait_until_ready_for_new_configs(scheduler: Scheduler, sleep_interval: float = 0.001, log_every_k_seconds: int = 5):
-    last_print = time()
-
-    num_pending_jobs = scheduler.get_num_pending_jobs()
-    num_running_jobs = scheduler.get_num_running_jobs()
-    num_free_workers = scheduler.get_num_free_workers()
-
-    # If there are no free workers or no job to potentially schedule to a empty worker, wait.
-    while num_free_workers == 0 or (num_running_jobs + num_pending_jobs) >= num_workers:
-        if time() - last_print > log_every_k_seconds:
-            last_print = time()
-            logger.info(f'No Free Worker Available. Sleep for {sleep_interval}s.')
-            logger.info(f'Currently Free Workers: {num_free_workers}')
-            logger.info(f'Currently Pending: {num_pending_jobs}')
-            logger.info(f'Currently Running: {num_running_jobs}')
-
-        sleep(sleep_interval)
-
-        num_pending_jobs = scheduler.get_num_pending_jobs()
-        num_running_jobs = scheduler.get_num_running_jobs()
-        num_free_workers = scheduler.get_num_free_workers()
 
 
 def hebo_config_to_configspace_config(hebo_config: Dict, configspace_cs: CS.ConfigurationSpace):

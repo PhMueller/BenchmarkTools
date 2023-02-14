@@ -1,10 +1,11 @@
 from enum import Enum
 
 
-class _BaseEnum(str, Enum):
+class CustomEnum(str, Enum):
     """ Helperclass:
     Improves printing Enums. (print(enum_obj) shows now the value instead of EnumObject.name: value
     """
+
     def __str__(self):
         return str(self.value)
 
@@ -12,7 +13,7 @@ class _BaseEnum(str, Enum):
         return str(item.value)
 
 
-class BenchmarkToolsTrackMetrics(_BaseEnum):
+class BenchmarkToolsTrackMetrics(CustomEnum):
     """
     Collection of all logging and metric tracking related names
     """
@@ -23,7 +24,7 @@ class BenchmarkToolsTrackMetrics(_BaseEnum):
     WALLCLOCK_CONFIG_END = 'EXP_WALLCLOCK_CONFIG_END'
 
 
-class BenchmarkToolsConstants(_BaseEnum):
+class BenchmarkToolsConstants(CustomEnum):
     """
     Collection of names used in the project.
     """
@@ -33,7 +34,7 @@ class BenchmarkToolsConstants(_BaseEnum):
     MO_EMP_PF_SUMMARY_FILE_NAME = 'summary_empirical_pareto_front.json'
 
 
-class BenchmarkTypes(_BaseEnum):
+class BenchmarkTypes(CustomEnum):
     """
     Supported Tasks. Compare BenchmarkTools/benchmarks
     """

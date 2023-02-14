@@ -1,7 +1,8 @@
 import argparse
 from pathlib import Path
 
-from BenchmarkTools.run_experiment import run
+from BenchmarkTools.run_experiment_with_runner import run
+# from BenchmarkTools.run_experiment import run
 from BenchmarkTools.utils.loader_tools import load_benchmark_and_optimizer_conf
 
 
