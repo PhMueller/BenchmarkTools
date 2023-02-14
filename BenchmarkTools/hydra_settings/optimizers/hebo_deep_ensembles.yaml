@@ -1,0 +1,38 @@
+# Optimizer name
+name: hebo_deep_ensembles
+
+# How to load the optimizer
+optimizer_import:
+  import_from: BenchmarkToolsOptimizers.optimizers.hebo.hebo
+  import_name: HEBOOptimizer
+
+# Parameters to initialize the optimizer
+optimizer_parameters:
+  general_algorithm_parameters:
+    kappa: 2.0
+    c_kappa: 0.
+    use_noise: False
+
+  model_parameters:
+    model_name: 'deep_ensemble'
+    num_hiddens: 64
+    num_layers: 2
+    output_noise: False
+    rand_prior: True
+    verbose: False
+    l1: 3e-3
+    lr: 3e-2
+    num_epochs: 100
+
+
+# Define some constant for automated plotting
+plotting:
+  name: HEBO$_DE$
+  color: red
+
+  # The linestyle can be specified in two ways:
+  # a) One of the following dash styles:
+  #    [ 'solid', 'dot', 'dash', 'longdash', 'dashdot', 'longdashdot' ]
+  # b) A string containing a dash length list in pixels or percentages
+  #    e.g. '5px 10px 2px 2px', '5, 10, 2, 2', '10% 20% 40%', etc.
+  linestyle: solid

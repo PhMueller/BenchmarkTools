@@ -4,12 +4,10 @@ from typing import List, Dict, Union, Deque
 from collections import deque
 
 import ray
-from loguru import logger
 
 from BenchmarkTools import logger
 from BenchmarkTools.core.ray_job import Job
 from BenchmarkTools.core.ray_worker import Worker
-from playground.ray_actor import num_workers
 
 
 class Scheduler(object):
@@ -197,7 +195,7 @@ def is_ready_for_new_configuration(scheduler: Scheduler, show_log_msg: bool = Fa
     free_workers_available_1 = num_free_workers > 0
 
     # It might be the case that a worker is not assigned yet but there are enough pending jobs to be assigned soon
-    free_workers_available_2 = (num_running_jobs + num_pending_jobs) < num_workers
+    free_workers_available_2 = (num_running_jobs + num_pending_jobs) < len(scheduler.workers_dict)
 
     # We can schedule a new configuration if both conditions are fulfilled.
     return free_workers_available_1 and free_workers_available_2

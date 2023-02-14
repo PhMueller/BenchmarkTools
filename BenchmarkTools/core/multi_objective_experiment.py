@@ -8,18 +8,17 @@ import ConfigSpace as CS
 import optuna
 
 from BenchmarkTools import logger
-from BenchmarkTools.core.constants import BenchmarkToolsConstants
+from BenchmarkTools.core.constants import BenchmarkToolsConstants, BenchmarkToolsTrackMetrics
 from BenchmarkTools.core.exceptions import BudgetExhaustedException
 
 from BenchmarkTools.core.ray_job import Job
 from BenchmarkTools.core.ray_scheduler import is_ready_for_new_configuration
-from BenchmarkToolsOptimizers.optimizers.base_optimizer import Optimizer
 
 
 class MultiObjectiveExperiment:
     def __init__(
             self,
-            optimizer: Optimizer,
+            optimizer,
             optimizer_settings: Dict,
             runner,
             benchmark_settings: Dict,
@@ -203,7 +202,9 @@ class MultiObjectiveExperiment:
 
         # --------------------------- UPDATE TIMER --------------------------------
         if self.is_surrogate:
-            self.bookkeeper.increase_used_resources(delta_surrogate_cost=finished_job.result_dict['cost'])
+            self.bookkeeper.increase_used_resources(
+                delta_surrogate_cost=finished_job.result_dict[BenchmarkToolsTrackMetrics.COST]
+            )
         # --------------------------- UPDATE TIMER --------------------------------
 
         # --------------------------- POST PROCESS --------------------------------
@@ -257,7 +258,7 @@ class MultiObjectiveExperiment:
                 # ----------------------- SCHEDULE NEW CONFIGS -----------------------------------------------------
 
             # --------------------------- FETCH & LOG RESULTS ----------------------------------------------------------
-            new_finished_jobs = self.runner.scheduler.get_finished_jobs()
+            new_finished_jobs: List[Job] = self.runner.scheduler.get_finished_jobs()
 
             # No new jobs have been received, skip the remaining.
             if len(new_finished_jobs) == 0:
@@ -270,7 +271,9 @@ class MultiObjectiveExperiment:
 
                 # ----------------------- UPDATE TIMER -----------------------------------------------------------------
                 if self.is_surrogate:
-                    self.bookkeeper.increase_used_resources(delta_surrogate_cost=job.result_dict['cost'])
+                    self.bookkeeper.increase_used_resources(
+                        delta_surrogate_cost=job.result_dict[BenchmarkToolsTrackMetrics.COST]
+                    )
                 self.bookkeeper.check_optimization_limits()
                 # ----------------------- UPDATE TIMER -----------------------------------------------------------------
 
@@ -351,28 +354,21 @@ class MultiObjectiveExperiment:
             distributions[hp.name] = dist
         return distributions
 
-    def add_results_to_trial(
-            self, result_dict: Dict, trial: optuna.trial.FrozenTrial, finish_time: datetime.datetime = None
-    ) -> optuna.trial.FrozenTrial:
-
+    def add_job_results_to_trial(self, job: Job, trial: optuna.trial.FrozenTrial) -> optuna.trial.FrozenTrial:
         # Log the results to the optuna study
-        trial.values = [result_dict['function_value'][obj_name] for obj_name in self.objective_names]
+        trial.values = [
+            job.result_dict[BenchmarkToolsTrackMetrics.FUNCTION_VALUE_FIELD][obj_name]
+            for obj_name in self.objective_names
+        ]
 
-        # TODO: Set additional information!
-        additional_info = result_dict['info']
-        additional_info.update(**{'cost': result_dict['cost']})
+        additional_info = job.result_dict[BenchmarkToolsTrackMetrics.INFO_FIELD]
+        additional_info.update(**{BenchmarkToolsTrackMetrics.COST: job.result_dict[BenchmarkToolsTrackMetrics.COST]})
         for k, v in additional_info.items():
             trial.set_user_attr(f'info_{k}', v)
 
         trial.state = optuna.trial.TrialState.COMPLETE
-
-        if finish_time is None:
-            trial.datetime_complete = datetime.datetime.now()
-
-        return trial
-
-    def add_job_results_to_trial(self, job: Job, trial: optuna.trial.FrozenTrial) -> optuna.trial.FrozenTrial:
-        trial = self.add_results_to_trial(result_dict=job.result_dict, trial=trial, finish_time=job.finish_time)
+        trial.datetime_complete = datetime.datetime.fromtimestamp(job.finish_time)
+        # trial.datetime_complete = datetime.datetime.now()
         return trial
 
     def create_trial_from_job(self, job: Job) -> optuna.trial.FrozenTrial:

@@ -67,6 +67,10 @@ def run(benchmark_name: str,
             configspace_cs = ray.get(self.workers[0].get_configuration_space.remote(seed=seed))
             return configspace_cs
 
+        def get_fidelity_space(self, seed: int = 0):
+            configspace_cs = ray.get(self.workers[0].get_fidelity_space.remote(seed=seed))
+            return configspace_cs
+
     runner = RayBenchmarkRunner(benchmark_settings=benchmark_settings, run_id=run_id, num_workers=1)
     runner.start()
 
