@@ -1,7 +1,7 @@
 import datetime
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from time import sleep
 
 import ConfigSpace as CS
@@ -12,7 +12,7 @@ from BenchmarkTools.core.constants import BenchmarkToolsConstants, BenchmarkTool
 from BenchmarkTools.core.exceptions import BudgetExhaustedException
 
 from BenchmarkTools.core.ray_job import Job
-from BenchmarkTools.core.ray_scheduler import is_ready_for_new_configuration
+
 
 
 class MultiObjectiveExperiment:
@@ -156,62 +156,42 @@ class MultiObjectiveExperiment:
                 info - Dict
 
         """
-        if isinstance(configuration, CS.Configuration):
-            configuration = configuration.get_dictionary()
-
         # --------------------------- CHECK RUN LIMITS -----------------------------------------------------------------
         self.bookkeeper.check_optimization_limits()
         # --------------------------- CHECK RUN LIMITS -----------------------------------------------------------------
 
-        # --------------------------- PREPARE CONFIG AND FIDELITY ------------------------------------------------------
-        # We combine the configuration and the fidelity dict to make it trackable for optuna.
-        if fidelity is not None:
-            optuna_configuration = {**configuration, **fidelity}
-        else:
-            optuna_configuration = configuration
-        # --------------------------- PREPARE CONFIG AND FIDELITY ------------------------------------------------------
-
         # --------------------------- EVALUATE TRIAL AND LOG RESULTS ---------------------------------------------------
-        new_trial_number = self.bookkeeper.increase_num_tae_calls_and_get_num_tae_calls(delta_tae_calls=1)
-
-        # Create a trial that is assigned to the function evaluation
-        trial = optuna.create_trial(
-            state=optuna.trial.TrialState.RUNNING,
-            params=optuna_configuration,
-            distributions={
-                name: dist for name, dist in self.optuna_distributions.items() if name in optuna_configuration.keys()
-            },
-        )
-        trial.number = new_trial_number
+        job, trial = self.prepare_job_and_trial(configuration, fidelity)
 
         # Query the benchmark. The Output should be in the return format of the HPOBench-Experiments
-        job = Job(job_id=new_trial_number, configuration=configuration, fidelity=fidelity)
         self.runner.scheduler.add_jobs([job])
         while True:
             finished_jobs = self.runner.scheduler.get_finished_jobs()
             if len(finished_jobs) != 0:
                 finished_job = finished_jobs[0]
                 break
-            sleep(0.001)
 
-        # result_dict: Dict = self.benchmark.objective_function(configuration=configuration, fidelity=fidelity)
+            sleep(0.001)
+            # TODO: i think we should check the opt limits here. but the question is how often...
+            self.bookkeeper.check_optimization_limits()
+
+        # ----------------------- UPDATE TIMER -------------------------------------------------------------------------
+        if self.is_surrogate:
+            self.bookkeeper.increase_used_resources(
+                delta_surrogate_cost=finished_job.result_dict[BenchmarkToolsTrackMetrics.COST]
+            )
+        self.bookkeeper.check_optimization_limits()
+
+        eval_interval = 100 if self.is_surrogate else 10
+        if (job.job_id % eval_interval) == 0:
+            self.bookkeeper.log_currently_used_resources()
+        # ----------------------- UPDATE TIMER -------------------------------------------------------------------------
 
         trial = self.add_job_results_to_trial(job=finished_job, trial=trial)
         self.study.add_trial(trial)
         # --------------------------- EVALUATE TRIAL AND LOG RESULTS ---------------------------------------------------
 
-        # --------------------------- UPDATE TIMER --------------------------------
-        if self.is_surrogate:
-            self.bookkeeper.increase_used_resources(
-                delta_surrogate_cost=finished_job.result_dict[BenchmarkToolsTrackMetrics.COST]
-            )
-        # --------------------------- UPDATE TIMER --------------------------------
-
         # --------------------------- POST PROCESS --------------------------------
-        eval_interval = 100 if self.is_surrogate else 10
-        if (new_trial_number % eval_interval) == 0:
-            self.bookkeeper.log_currently_used_resources()
-
         # TODO: Callbacks
         #  Example: Add Save-Callback
         # --------------------------- POST PROCESS --------------------------------
@@ -230,32 +210,23 @@ class MultiObjectiveExperiment:
             self.bookkeeper.check_optimization_limits()
             # --------------------------- CHECK RUN LIMITS -------------------------------------------------------------
 
-            # --------------------------- CREATE NEW TRIALS ------------------------------------------------------------
-            if is_ready_for_new_configuration(scheduler=self.runner.scheduler, show_log_msg=False):
+            # --------------------------- CREATE NEW TRIALS AND SCHEDULE -----------------------------------------------
+            if self.runner.scheduler.is_ready_for_new_configuration(show_log_msg=False):
 
-                new_configurations: List[Dict]
-                new_fidelities: List[Dict]
                 new_configurations, new_fidelities = self.optimizer.ask()
-
-                new_configurations = [
-                    configuration.get_dictionary() if isinstance(configuration, CS.Configuration) else configuration
-                    for configuration in new_configurations
-                ]
+                assert len(new_configurations) == len(new_fidelities), \
+                    f'The optimizer returned not matching configurations and fidelities. Number of sampled ' \
+                    f'configurations ({len(new_configurations)}) != Number of fidelities ({len(new_fidelities)})'
 
                 new_jobs: List[Job] = []
                 for configuration, fidelity in zip(new_configurations, new_fidelities):
-
-                    new_trial_number = self.bookkeeper.increase_num_tae_calls_and_get_num_tae_calls(delta_tae_calls=1)
-                    job = Job(configuration=configuration, fidelity=fidelity, job_id=new_trial_number)
-                    trial = self.create_trial_from_job(job)
-
+                    job, trial = self.prepare_job_and_trial(configuration, fidelity)
                     new_jobs.append(job)
                     running_jobs[job.job_id] = trial
-                # ----------------------- CREATE NEW TRIALS --------------------------------------------------------
+                    # self.study.add_trial(trial=trial)
 
-                # ----------------------- SCHEDULE NEW CONFIGS -----------------------------------------------------
                 self.runner.scheduler.add_jobs(jobs=new_jobs)
-                # ----------------------- SCHEDULE NEW CONFIGS -----------------------------------------------------
+            # --------------------------- CREATE NEW TRIALS AND SCHEDULE -----------------------------------------------
 
             # --------------------------- FETCH & LOG RESULTS ----------------------------------------------------------
             new_finished_jobs: List[Job] = self.runner.scheduler.get_finished_jobs()
@@ -267,7 +238,6 @@ class MultiObjectiveExperiment:
             for job in new_finished_jobs:
 
                 trial = running_jobs.pop(job.job_id)
-                trial = self.add_job_results_to_trial(job, trial)
 
                 # ----------------------- UPDATE TIMER -----------------------------------------------------------------
                 if self.is_surrogate:
@@ -275,12 +245,45 @@ class MultiObjectiveExperiment:
                         delta_surrogate_cost=job.result_dict[BenchmarkToolsTrackMetrics.COST]
                     )
                 self.bookkeeper.check_optimization_limits()
-                # ----------------------- UPDATE TIMER -----------------------------------------------------------------
 
-                self.study.add_trial(trial)
                 eval_interval = 100 if self.is_surrogate else 10
                 if (job.job_id % eval_interval) == 0:
                     self.bookkeeper.log_currently_used_resources()
+                # ----------------------- UPDATE TIMER -----------------------------------------------------------------
+
+                trial = self.add_job_results_to_trial(job, trial)
+                self.study.add_trial(trial=trial)
+
+                # potentially slow since list operation.
+                # However, trials[trials.state == running] should be always a small list
+                # running_trials = self.study.get_trials(states=[optuna.trial.TrialState.RUNNING])
+                # trial = [trial for trial in running_trials if trial.number == job.job_id][0]
+
+                # additional_info = job.result_dict[BenchmarkToolsTrackMetrics.INFO_FIELD]
+                # additional_info.update(
+                #     **{BenchmarkToolsTrackMetrics.COST: job.result_dict[BenchmarkToolsTrackMetrics.COST]})
+                #
+                # internal_trial_id = self.study._storage.get_trial_id_from_study_id_trial_number(self.study._study_id, trial.number)
+                # for k, v in additional_info.items():
+                #     self.study._storage.set_trial_user_attr(trial_id=internal_trial_id, key=f'info_{k}', value=v)
+                #
+                # trial.values = [
+                #     job.result_dict[BenchmarkToolsTrackMetrics.FUNCTION_VALUE_FIELD][obj_name]
+                #     for obj_name in self.objective_names
+                # ]
+                # trial.state = optuna.trial.TrialState.COMPLETE
+                # trial.datetime_complete = datetime.datetime.fromtimestamp(job.finish_time)
+                #
+                # # self.study._storage.set_trial_user_attr(trial_id=internal_trial_id, key='datetime_complete', value=trial.datetime_complete)
+                #
+                # self.study.tell(trial.number, values=trial.values, state=trial.state)
+                #
+                # all_t = self.study.get_trials()
+                # _trial = [t for t in all_t if t.number == trial.number][0]
+                # print('Trial:          ', trial.datetime_complete)
+                # print('Trial in Study: ', _trial.datetime_complete)
+                # print()
+                # ## # ## ##
 
             self.optimizer.tell(new_finished_jobs)
             # --------------------------- FETCH & LOG RESULTS ----------------------------------------------------------
@@ -389,3 +392,14 @@ class MultiObjectiveExperiment:
         )
         trial.number = job.job_id
         return trial
+
+    def prepare_job_and_trial(self, configuration, fidelity) -> Tuple[Job, optuna.trial.FrozenTrial]:
+        if isinstance(configuration, CS.Configuration):
+            configuration = configuration.get_dictionary()
+
+        new_trial_number = self.bookkeeper.increase_num_tae_calls_and_get_num_tae_calls(delta_tae_calls=1)
+        job = Job(configuration=configuration, fidelity=fidelity, job_id=new_trial_number)
+        trial = self.create_trial_from_job(job)
+
+        return job, trial
+
